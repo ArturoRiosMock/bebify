@@ -19,8 +19,8 @@ export function toCanonicalCollectionHandle(shopifyHandle: string): string {
 }
 
 const COLLECTION_DISPLAY_TITLES: Record<string, string> = {
-  aguas: 'Aguas',
-  refrescos: 'Refrescos',
+  aguas: 'Refrescos',
+  refrescos: 'Aguas',
 };
 
 /** Título para UI/SEO a partir del handle de la URL */
