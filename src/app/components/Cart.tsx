@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCart } from '@/app/context/CartContext';
@@ -26,6 +26,18 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
 
   const [showPurchaseType, setShowPurchaseType] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Chrome restaura la página desde bfcache al volver del checkout con estado congelado.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setCheckoutLoading(false);
+      setShowPurchaseType(false);
+    };
+
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
 
   const itemId = (item: { lineId?: string; id: number | string }) => item.lineId ?? item.id;
 
@@ -56,10 +68,16 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
         }
       }
       const ok = await goToCheckout!();
-      if (ok) onClose();
+      if (ok) {
+        setShowPurchaseType(false);
+        onClose();
+      }
     } catch {
       const ok = await goToCheckout?.();
-      if (ok) onClose();
+      if (ok) {
+        setShowPurchaseType(false);
+        onClose();
+      }
     } finally {
       setCheckoutLoading(false);
     }

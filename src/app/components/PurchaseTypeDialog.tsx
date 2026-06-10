@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, PartyPopper, Loader2 } from 'lucide-react';
@@ -13,7 +13,6 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { Label } from '@/app/components/ui/label';
 import { Input } from '@/app/components/ui/input';
-import { Checkbox } from '@/app/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -47,7 +46,6 @@ export const PurchaseTypeDialog = ({
   error,
 }: PurchaseTypeDialogProps) => {
   const [purchaseType, setPurchaseType] = useState<PurchaseType>('personal');
-  const [ageConfirmed, setAgeConfirmed] = useState(true);
 
   const {
     handleSubmit,
@@ -56,15 +54,20 @@ export const PurchaseTypeDialog = ({
     formState: { errors },
   } = useForm<EventFormData>();
 
+  useEffect(() => {
+    if (open) {
+      setPurchaseType('personal');
+      reset();
+    }
+  }, [open, reset]);
+
   const handleClose = () => {
     setPurchaseType('personal');
-    setAgeConfirmed(false);
     reset();
     onClose();
   };
 
   const handleContinue = () => {
-    if (!ageConfirmed) return;
     if (purchaseType === 'personal') {
       onConfirm(null);
       return;
@@ -304,7 +307,7 @@ export const PurchaseTypeDialog = ({
           <button
             type="button"
             onClick={handleContinue}
-            disabled={loading || !ageConfirmed}
+            disabled={loading}
             className="flex-1 sm:flex-none py-2.5 px-5 bg-[#0c3c1f] text-white rounded-lg font-bold text-sm hover:bg-[#0a3019] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
