@@ -62,7 +62,7 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
     {
       id: 5,
       image: '/cta.jpg',
-      mobileImage: '/movil_mundial.jpg',
+      mobileImage: '/movil_mundial.png',
       bgColor: '#0c3c1f',
       buttonText: 'VER PROMO-MUNDIALISTA',
       buttonAction: () => navigate('/categorias/promo-mundialista'),
