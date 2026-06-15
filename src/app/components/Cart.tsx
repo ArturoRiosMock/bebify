@@ -35,6 +35,7 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
   const handleViewCart = () => {
     onClose();
     navigate('/carrito');
+    window.scrollTo(0, 0);
   };
 
   return (

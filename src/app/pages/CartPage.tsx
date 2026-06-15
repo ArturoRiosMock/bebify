@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Trash2, ShoppingBag, Lock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,6 +28,10 @@ export const CartPage: React.FC = () => {
   const itemId = (item: { lineId?: string; id: number | string }) => item.lineId ?? item.id;
   const minimumOrderMessage = formatMinimumOrderMessage(minimumOrderStatus);
   const canCheckout = minimumOrderStatus.meetsMinimum;
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleCheckout = async () => {
     if (!isAuthenticated) {
