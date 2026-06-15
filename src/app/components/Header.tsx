@@ -7,7 +7,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { PLACEHOLDER_IMAGES } from '@/assets/placeholders';
 import { SearchDrawer } from '@/app/components/SearchDrawer';
-import { MENU_ITEMS, STATIC_LINKS } from '@/data/navigation-menu';
+import { MENU_ITEMS, STATIC_LINKS, getCategoryHref } from '@/data/navigation-menu';
 import type { MenuItem, MenuLink, MenuAccordion } from '@/data/navigation-menu';
 
 const logo = PLACEHOLDER_IMAGES.logo;
@@ -15,7 +15,6 @@ const logo = PLACEHOLDER_IMAGES.logo;
 interface HeaderProps {
   onCartClick: () => void;
   onWishlistClick?: () => void;
-  onCategoryClick: (collectionHandle: string) => void;
   searchDrawerOpen: boolean;
   onSearchDrawerChange: (open: boolean) => void;
 }
@@ -29,7 +28,7 @@ const announcements = [
 /** Código postal + botón Rastreo en la barra oscura (reactivar cuando haya integración). */
 const SHOW_HEADER_LOCATION_AND_TRACKING = false;
 
-export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDrawerOpen, onSearchDrawerChange }: HeaderProps) => {
+export const Header = ({ onCartClick, onWishlistClick, searchDrawerOpen, onSearchDrawerChange }: HeaderProps) => {
   const { getTotalItems } = useCart();
   const { totalItems: wishlistCount } = useWishlist();
   const { isAuthenticated, user, logout } = useAuth();
@@ -48,10 +47,10 @@ export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDr
     return () => clearInterval(interval);
   }, []);
 
-  const handleCategoryClick = (collectionHandle: string) => {
-    onCategoryClick(collectionHandle);
+  const closeMenus = () => {
     setMobileMenuOpen(false);
     setHoveredCategory(null);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   return (
@@ -193,12 +192,13 @@ export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDr
                 onMouseLeave={() => setHoveredCategory(null)}
               >
                 {item.type === 'link' ? (
-                  <button
-                    onClick={() => handleCategoryClick(item.handle)}
+                  <Link
+                    to={getCategoryHref(item.handle)}
+                    onClick={closeMenus}
                     className="flex items-center gap-1 text-[#212121] hover:text-[#0055a2] transition-colors font-medium text-sm whitespace-nowrap px-3 py-2 rounded hover:bg-gray-50"
                   >
                     {item.label}
-                  </button>
+                  </Link>
                 ) : (
                   <>
                     <button
@@ -214,22 +214,24 @@ export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDr
                           <div className="p-3">
                             <div className="grid grid-cols-2 gap-0.5">
                               {item.children.map((child) => (
-                                <button
+                                <Link
                                   key={child.handle}
-                                  onClick={() => handleCategoryClick(child.handle)}
-                                  className="text-left px-3 py-2 rounded-lg text-sm text-[#212121] hover:bg-[#f0f7ff] hover:text-[#0055a2] transition-colors"
+                                  to={getCategoryHref(child.handle)}
+                                  onClick={closeMenus}
+                                  className="text-left px-3 py-2 rounded-lg text-sm text-[#212121] hover:bg-[#f0f7ff] hover:text-[#0055a2] transition-colors block"
                                 >
                                   {child.label}
-                                </button>
+                                </Link>
                               ))}
                             </div>
                             <div className="border-t border-gray-100 mt-2 pt-2">
-                              <button
-                                onClick={() => handleCategoryClick(item.parentHandle)}
-                                className="w-full text-center text-xs font-semibold text-[#0055a2] hover:text-[#004488] py-1.5 transition-colors"
+                              <Link
+                                to={getCategoryHref(item.parentHandle)}
+                                onClick={closeMenus}
+                                className="block w-full text-center text-xs font-semibold text-[#0055a2] hover:text-[#004488] py-1.5 transition-colors"
                               >
                                 Ver todos los {item.label.toLowerCase()} →
-                              </button>
+                              </Link>
                             </div>
                           </div>
                         </div>
@@ -319,13 +321,14 @@ export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDr
               {/* Menu items */}
               {MENU_ITEMS.map((item) => (
                 item.type === 'link' ? (
-                  <button
+                  <Link
                     key={item.handle}
-                    onClick={() => handleCategoryClick(item.handle)}
+                    to={getCategoryHref(item.handle)}
+                    onClick={closeMenus}
                     className="block w-full text-left text-[#212121] py-3 px-4 hover:bg-gray-50 transition-colors font-medium border-b border-gray-100 last:border-0"
                   >
                     {item.label}
-                  </button>
+                  </Link>
                 ) : (
                   <div key={item.label} className="border-b border-gray-100">
                     <button
@@ -349,13 +352,14 @@ export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDr
                           className="overflow-hidden bg-gray-50"
                         >
                           {item.children.map((child) => (
-                            <button
+                            <Link
                               key={child.handle}
-                              onClick={() => handleCategoryClick(child.handle)}
+                              to={getCategoryHref(child.handle)}
+                              onClick={closeMenus}
                               className="block w-full text-left text-[#444] py-2.5 pl-8 pr-4 hover:bg-blue-50 hover:text-[#0055a2] transition-colors text-sm border-t border-gray-100"
                             >
                               {child.label}
-                            </button>
+                            </Link>
                           ))}
                         </motion.div>
                       )}

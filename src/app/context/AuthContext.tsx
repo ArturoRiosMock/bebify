@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { isShopifyConfigured, getStorefrontApiUrl, shopifyConfig } from '@/shopify/config';
 import { AUTH_STORAGE_KEY, loadStoredAuthUser, type StoredAuthUser } from '@/app/authStorage';
+import {
+  type AuthErrorDisplay,
+  getConnectionErrorDisplay,
+  getGenericLoginErrorDisplay,
+  mapShopifyCustomerError,
+} from '@/app/utils/authErrors';
 
 export type AuthUser = StoredAuthUser;
 
@@ -16,6 +22,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  errorDisplay: AuthErrorDisplay | null;
   login: (email: string, password: string) => Promise<boolean>;
   register: (input: RegisterInput) => Promise<{ success: boolean; error: string | null }>;
   recoverPassword: (email: string) => Promise<{ success: boolean; error: string | null }>;
@@ -39,7 +46,10 @@ const saveAuth = (user: AuthUser | null) => {
   } catch { /* silently ignore */ }
 };
 
-async function shopifyCustomerLogin(email: string, password: string): Promise<{ user: AuthUser | null; error: string | null }> {
+async function shopifyCustomerLogin(
+  email: string,
+  password: string,
+): Promise<{ user: AuthUser | null; errorDisplay: AuthErrorDisplay | null }> {
   const query = `
     mutation customerAccessTokenCreate($input: CustomerAccessTokenCreateInput!) {
       customerAccessTokenCreate(input: $input) {
@@ -73,7 +83,10 @@ async function shopifyCustomerLogin(email: string, password: string): Promise<{ 
     const result = data?.data?.customerAccessTokenCreate;
 
     if (result?.customerUserErrors?.length > 0) {
-      return { user: null, error: result.customerUserErrors[0].message };
+      return {
+        user: null,
+        errorDisplay: mapShopifyCustomerError(result.customerUserErrors[0], 'login'),
+      };
     }
 
     if (result?.customerAccessToken?.accessToken) {
@@ -85,13 +98,13 @@ async function shopifyCustomerLogin(email: string, password: string): Promise<{ 
           lastName: customerData?.lastName ?? '',
           accessToken: result.customerAccessToken.accessToken,
         },
-        error: null,
+        errorDisplay: null,
       };
     }
 
-    return { user: null, error: 'Error al iniciar sesión. Verifica tus credenciales.' };
+    return { user: null, errorDisplay: getGenericLoginErrorDisplay() };
   } catch {
-    return { user: null, error: 'Error de conexión con el servidor.' };
+    return { user: null, errorDisplay: getConnectionErrorDisplay() };
   }
 }
 
@@ -149,11 +162,13 @@ async function shopifyCustomerRecover(
 
     if (result?.customerUserErrors?.length > 0) {
       const recoverError = result.customerUserErrors[0];
-      // No revelamos si el email existe o no, por seguridad.
       if (recoverError.code === 'UNIDENTIFIED_CUSTOMER') {
         return { success: true, error: null };
       }
-      return { success: false, error: recoverError.message };
+      return {
+        success: false,
+        error: mapShopifyCustomerError(recoverError, 'recover').title,
+      };
     }
 
     return { success: true, error: null };
@@ -212,7 +227,8 @@ async function shopifyCustomerReset(
     const result = useResetUrl ? data?.data?.customerResetByUrl : data?.data?.customerReset;
 
     if (result?.customerUserErrors?.length > 0) {
-      return { success: false, error: result.customerUserErrors[0].message };
+      const resetError = mapShopifyCustomerError(result.customerUserErrors[0], 'reset');
+      return { success: false, error: resetError.title };
     }
 
     const accessToken = result?.customerAccessToken?.accessToken;
@@ -263,7 +279,8 @@ async function shopifyCustomerCreate(input: RegisterInput): Promise<{ success: b
     const result = data?.data?.customerCreate;
 
     if (result?.customerUserErrors?.length > 0) {
-      return { success: false, error: result.customerUserErrors[0].message };
+      const registerError = mapShopifyCustomerError(result.customerUserErrors[0], 'register');
+      return { success: false, error: registerError.title };
     }
 
     if (result?.customer?.id) {
@@ -280,6 +297,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(loadStoredAuthUser);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDisplay, setErrorDisplay] = useState<AuthErrorDisplay | null>(null);
+
+  const setAuthError = useCallback((display: AuthErrorDisplay | null) => {
+    setErrorDisplay(display);
+    setError(display?.title ?? null);
+  }, []);
 
   useEffect(() => {
     saveAuth(user);
@@ -287,16 +310,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setLoading(true);
-    setError(null);
+    setAuthError(null);
 
     if (isShopifyConfigured()) {
-      const result = await shopifyCustomerLogin(email, password);
+      const result = await shopifyCustomerLogin(email.trim(), password);
       setLoading(false);
       if (result.user) {
         setUser(result.user);
         return true;
       }
-      setError(result.error);
+      setAuthError(result.errorDisplay);
       return false;
     }
 
@@ -304,56 +327,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await new Promise((r) => setTimeout(r, 800));
     setLoading(false);
 
-    if (!email || !password) {
-      setError('Ingresa tu correo y contraseña.');
+    if (!email.trim() || !password) {
+      setAuthError({
+        title: 'Faltan datos para iniciar sesión',
+        description: 'Completa tu correo y contraseña para continuar.',
+        hints: ['Ingresa el correo con el que te registraste en Bebify.'],
+      });
       return false;
     }
 
     if (password.length < 4) {
-      setError('Contraseña incorrecta.');
+      setAuthError(getGenericLoginErrorDisplay());
       return false;
     }
 
     setUser({
-      email,
+      email: email.trim(),
       firstName: email.split('@')[0],
       accessToken: 'demo-token',
     });
     return true;
-  }, []);
+  }, [setAuthError]);
 
   const register = useCallback(async (input: RegisterInput): Promise<{ success: boolean; error: string | null }> => {
     setLoading(true);
-    setError(null);
+    setAuthError(null);
 
     if (isShopifyConfigured()) {
       const result = await shopifyCustomerCreate(input);
       setLoading(false);
-      if (!result.success) setError(result.error);
+      if (!result.success) setAuthError(result.error ? { title: result.error } : null);
       return result;
     }
 
     await new Promise((r) => setTimeout(r, 800));
     setLoading(false);
     return { success: true, error: null };
-  }, []);
+  }, [setAuthError]);
 
   const recoverPassword = useCallback(
     async (email: string): Promise<{ success: boolean; error: string | null }> => {
       setLoading(true);
-      setError(null);
+      setAuthError(null);
 
       if (!email.trim()) {
         setLoading(false);
-        const message = 'Ingresa tu correo electrónico.';
-        setError(message);
+        const message = 'Ingresa el correo electrónico de tu cuenta.';
+        setAuthError({
+          title: message,
+          hints: ['Usa el mismo correo con el que te registraste en Bebify.'],
+        });
         return { success: false, error: message };
       }
 
       if (isShopifyConfigured()) {
         const result = await shopifyCustomerRecover(email.trim());
         setLoading(false);
-        if (!result.success) setError(result.error);
+        if (!result.success) setAuthError(result.error ? { title: result.error } : null);
         return result;
       }
 
@@ -361,7 +391,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return { success: true, error: null };
     },
-    [],
+    [setAuthError],
   );
 
   const resetPassword = useCallback(
@@ -370,12 +400,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       options: { customerId: string; resetToken: string } | { resetUrl: string },
     ): Promise<{ success: boolean; error: string | null }> => {
       setLoading(true);
-      setError(null);
+      setAuthError(null);
 
       if (password.length < 5) {
         setLoading(false);
         const message = 'La contraseña debe tener al menos 5 caracteres.';
-        setError(message);
+        setAuthError({
+          title: message,
+          hints: ['Elige una contraseña segura que recuerdes fácilmente.'],
+        });
         return { success: false, error: message };
       }
 
@@ -386,7 +419,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(result.user);
           return { success: true, error: null };
         }
-        setError(result.error);
+        setAuthError(result.error ? { title: result.error } : null);
         return { success: false, error: result.error };
       }
 
@@ -394,15 +427,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return { success: true, error: null };
     },
-    [],
+    [setAuthError],
   );
 
   const logout = useCallback(() => {
     setUser(null);
-    setError(null);
-  }, []);
+    setAuthError(null);
+  }, [setAuthError]);
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => setAuthError(null), [setAuthError]);
 
   return (
     <AuthContext.Provider value={{
@@ -410,6 +443,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isAuthenticated: !!user,
       loading,
       error,
+      errorDisplay,
       login,
       register,
       recoverPassword,

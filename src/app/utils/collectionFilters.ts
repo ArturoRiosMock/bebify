@@ -1,4 +1,5 @@
 import type { Product } from '@/shopify/types';
+import { sortProductsInStockFirst } from '@/app/utils/productStock';
 
 export type CollectionSort = 'default' | 'price-asc' | 'price-desc' | 'name-asc';
 
@@ -58,7 +59,7 @@ export function filterAndSortProducts(products: Product[], state: CollectionFilt
       break;
   }
 
-  return list;
+  return sortProductsInStockFirst(list);
 }
 
 export function uniqueVendorLabels(products: Product[]): string[] {

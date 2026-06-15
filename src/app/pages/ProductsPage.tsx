@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { ProductCard } from '@/app/components/ProductCard';
@@ -15,14 +15,23 @@ import { useShopifyProductsCatalog } from '@/shopify/hooks/useShopifyProductsCat
 import { CategorySidebar } from '@/app/components/CategorySidebar';
 
 /**
- * Página "Todos los productos": lista completa del catálogo con
- * sidebar de categorías y filtros, sin estar restringida a una colección.
+ * Página "Todos los productos": catálogo con carga incremental desde Shopify.
  */
 export const ProductsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { products, loading, error } = useShopifyProductsCatalog();
+  const {
+    products,
+    loading,
+    loadingMore,
+    error,
+    hasNextPage,
+    isFullyLoaded,
+    ensureLoadedForPage,
+    loadAll,
+  } = useShopifyProductsCatalog();
 
   const [filters, setFilters] = useState(defaultCollectionFilterState);
+  const [pageLoading, setPageLoading] = useState(false);
 
   useEffect(() => {
     setFilters(defaultCollectionFilterState());
@@ -30,7 +39,7 @@ export const ProductsPage: React.FC = () => {
 
   const filteredProducts = useMemo(
     () => filterAndSortProducts(products, filters),
-    [products, filters]
+    [products, filters],
   );
 
   const {
@@ -40,11 +49,58 @@ export const ProductsPage: React.FC = () => {
     visiblePages,
     handlePageChange,
     setCurrentPage,
-  } = useProductPagination(filteredProducts);
+  } = useProductPagination(filteredProducts, { hasMore: hasNextPage && !hasActiveFilters(filters) });
 
   useEffect(() => {
     setCurrentPage(1);
   }, [filters, setCurrentPage]);
+
+  useEffect(() => {
+    if (hasActiveFilters(filters) && hasNextPage && !isFullyLoaded) {
+      void loadAll();
+    }
+  }, [filters, hasNextPage, isFullyLoaded, loadAll]);
+
+  const handlePageChangeWithFetch = useCallback(
+    async (page: number) => {
+      if (page === currentPage) {
+        return;
+      }
+
+      setPageLoading(true);
+      try {
+        await ensureLoadedForPage(page, true);
+        handlePageChange(page);
+      } finally {
+        setPageLoading(false);
+      }
+    },
+    [currentPage, ensureLoadedForPage, handlePageChange],
+  );
+
+  const productCountLabel = useMemo(() => {
+    if (loading) {
+      return null;
+    }
+
+    if (hasActiveFilters(filters)) {
+      if (!isFullyLoaded && hasNextPage) {
+        return `${filteredProducts.length} productos (filtrando catálogo cargado…)`;
+      }
+
+      return hasActiveFilters(filters) && products.length > 0
+        ? `${filteredProducts.length} de ${products.length} productos`
+        : `${filteredProducts.length} productos encontrados`;
+    }
+
+    if (isFullyLoaded) {
+      return `${products.length} productos encontrados`;
+    }
+
+    return `${products.length}+ productos · cargando catálogo…`;
+  }, [loading, filters, filteredProducts.length, products.length, isFullyLoaded, hasNextPage]);
+
+  const showGridLoading = loading || pageLoading;
 
   return (
     <div className="min-h-[60vh]">
@@ -63,9 +119,8 @@ export const ProductsPage: React.FC = () => {
       <div className="bg-white">
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold text-[#0055a2] mb-2">Todos los productos</h1>
-          <p className="text-[#717182] max-w-2xl">
-            Explora nuestro catálogo completo de bebidas. Filtra por categoría, marca,
-            precio o descuentos para encontrar lo que buscas.
+          <p className="text-[#717182]">
+            Explora nuestro catálogo completo de bebidas. Filtra por categoría, marca, precio o descuentos para encontrar lo que buscas.
           </p>
         </div>
       </div>
@@ -91,18 +146,20 @@ export const ProductsPage: React.FC = () => {
 
           <div>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              {!loading && (
+              {productCountLabel && (
                 <p className="text-[#717182] text-sm">
-                  {hasActiveFilters(filters) && products.length > 0
-                    ? `${filteredProducts.length} de ${products.length} productos`
-                    : `${products.length} productos encontrados`}
+                  {productCountLabel}
                   {filteredProducts.length > PRODUCTS_PER_PAGE && (
                     <span className="text-[#717182]">
                       {' '}
                       · Página {currentPage} de {totalPages}
+                      {!isFullyLoaded && hasNextPage ? '+' : ''}
                     </span>
                   )}
                 </p>
+              )}
+              {loadingMore && !loading && (
+                <p className="text-xs text-[#717182]">Cargando más productos…</p>
               )}
             </div>
 
@@ -111,7 +168,7 @@ export const ProductsPage: React.FC = () => {
                 products={products}
                 value={filters}
                 onChange={setFilters}
-                disabled={loading}
+                disabled={loading || loadingMore}
               />
             )}
 
@@ -119,7 +176,7 @@ export const ProductsPage: React.FC = () => {
               <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg">{error}</div>
             )}
 
-            {loading ? (
+            {showGridLoading ? (
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-6">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div key={i} className="h-60 sm:h-80 bg-gray-100 rounded-lg animate-pulse" />
@@ -166,7 +223,8 @@ export const ProductsPage: React.FC = () => {
                   currentPage={currentPage}
                   totalPages={totalPages}
                   visiblePages={visiblePages}
-                  onPageChange={handlePageChange}
+                  onPageChange={handlePageChangeWithFetch}
+                  disabled={pageLoading || loadingMore}
                 />
               </>
             )}

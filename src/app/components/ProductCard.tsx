@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Heart, Star, Minus, Plus, Lock } from 'lucide-react';
+import { Heart, Star, Lock } from 'lucide-react';
 import { Product, useCart } from '@/app/context/CartContext';
 import { useWishlist } from '@/app/context/WishlistContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { isProductInStock } from '@/app/utils/productStock';
 import { OutOfStockMessage } from '@/app/components/OutOfStockMessage';
+import { QuantityInput } from '@/app/components/QuantityInput';
 
 interface ProductCardProps {
   product: Product;
@@ -36,16 +37,6 @@ export const ProductCard = ({ product, onClick }: ProductCardProps) => {
     setQuantity(1);
   };
 
-  const incrementQuantity = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setQuantity(prev => prev + 1);
-  };
-  
-  const decrementQuantity = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setQuantity(prev => Math.max(1, prev - 1));
-  };
-
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     toggleItem({
@@ -58,15 +49,6 @@ export const ProductCard = ({ product, onClick }: ProductCardProps) => {
       handle: product.handle,
       variantId: product.variantId,
     });
-  };
-
-  const handleQuantityInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    setQuantity(Math.max(1, parseInt(e.target.value) || 1));
-  };
-
-  const handleQuantityInputClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
   };
 
   return (
@@ -152,68 +134,35 @@ export const ProductCard = ({ product, onClick }: ProductCardProps) => {
 
             {/* Quantity Controls - Desktop */}
             <div className="hidden sm:flex items-center gap-2 mb-3">
-              <button
-                onClick={decrementQuantity}
-                aria-label="Disminuir cantidad"
-                className="w-8 h-8 flex items-center justify-center border border-[#0055a2] text-[#0055a2] rounded hover:bg-[#0055a2] hover:text-white transition-colors"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-              <input
-                type="number"
+              <QuantityInput
                 value={quantity}
-                onChange={handleQuantityInputChange}
-                onClick={handleQuantityInputClick}
-                aria-label="Cantidad"
-                className="w-12 h-8 text-center border border-gray-300 rounded text-[#212121] font-medium"
+                onChange={setQuantity}
+                stopPropagation
               />
-              <button
-                onClick={incrementQuantity}
-                aria-label="Aumentar cantidad"
-                className="w-8 h-8 flex items-center justify-center border border-[#0055a2] text-[#0055a2] rounded hover:bg-[#0055a2] hover:text-white transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
               <motion.button
                 onClick={handleAddToCart}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="flex-1 bg-[#0055a2] text-white py-2 px-4 rounded hover:bg-[#004488] transition-colors text-sm font-semibold uppercase"
               >
-                Comprar
+                Agregar
               </motion.button>
             </div>
 
             {/* Quantity Controls + Buy - Mobile */}
             <div className="sm:hidden flex items-center gap-1.5 mb-1.5">
-              <button
-                onClick={decrementQuantity}
-                aria-label="Disminuir cantidad"
-                className="w-7 h-7 shrink-0 flex items-center justify-center border border-[#0055a2] text-[#0055a2] rounded"
-              >
-                <Minus className="w-3.5 h-3.5" />
-              </button>
-              <input
-                type="number"
+              <QuantityInput
                 value={quantity}
-                onChange={handleQuantityInputChange}
-                onClick={handleQuantityInputClick}
-                aria-label="Cantidad"
-                className="w-9 h-7 text-center border border-gray-300 rounded text-[#212121] font-medium text-xs"
+                onChange={setQuantity}
+                size="sm"
+                stopPropagation
               />
-              <button
-                onClick={incrementQuantity}
-                aria-label="Aumentar cantidad"
-                className="w-7 h-7 shrink-0 flex items-center justify-center border border-[#0055a2] text-[#0055a2] rounded"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
               <motion.button
                 onClick={handleAddToCart}
                 whileTap={{ scale: 0.95 }}
                 className="flex-1 bg-[#0055a2] text-white py-1.5 px-2 rounded hover:bg-[#004488] transition-colors text-[11px] font-semibold uppercase"
               >
-                Comprar
+                Agregar
               </motion.button>
             </div>
           </>

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Slider from 'react-slick';
-import { Zap, Lock, Minus, Plus } from 'lucide-react';
+import { Zap, Lock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { useShopifyProducts } from '@/shopify/hooks/useShopifyProducts';
 import { isProductInStock } from '@/app/utils/productStock';
 import { OutOfStockMessage } from '@/app/components/OutOfStockMessage';
+import { QuantityInput } from '@/app/components/QuantityInput';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
@@ -65,8 +66,6 @@ export const FlashDeals: React.FC = () => {
 
     const [quantity, setQuantity] = useState(1);
     const inStock = isProductInStock(deal);
-    const decrement = () => setQuantity((q) => Math.max(1, q - 1));
-    const increment = () => setQuantity((q) => Math.min(99, q + 1));
 
     return (
       <motion.div
@@ -124,24 +123,12 @@ export const FlashDeals: React.FC = () => {
               </div>
             ) : (
               <>
-            <div className="flex items-center justify-center gap-1.5 mb-1.5 md:mb-2">
-              <button
-                onClick={decrement}
-                aria-label="Disminuir cantidad"
-                className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center border border-[#0055a2] text-[#0055a2] rounded"
-              >
-                <Minus className="w-3 h-3 md:w-3.5 md:h-3.5" />
-              </button>
-              <span className="min-w-[1.5rem] text-center text-[#212121] font-medium text-xs md:text-sm">
-                {quantity}
-              </span>
-              <button
-                onClick={increment}
-                aria-label="Aumentar cantidad"
-                className="w-6 h-6 md:w-7 md:h-7 flex items-center justify-center border border-[#0055a2] text-[#0055a2] rounded"
-              >
-                <Plus className="w-3 h-3 md:w-3.5 md:h-3.5" />
-              </button>
+            <div className="flex items-center justify-center mb-1.5 md:mb-2">
+              <QuantityInput
+                value={quantity}
+                onChange={setQuantity}
+                size="sm"
+              />
             </div>
 
             <motion.button

@@ -13,6 +13,7 @@ interface ProductGridPaginationProps {
   totalPages: number;
   visiblePages: (number | 'ellipsis')[];
   onPageChange: (page: number) => void;
+  disabled?: boolean;
 }
 
 export const ProductGridPagination: React.FC<ProductGridPaginationProps> = ({
@@ -20,6 +21,7 @@ export const ProductGridPagination: React.FC<ProductGridPaginationProps> = ({
   totalPages,
   visiblePages,
   onPageChange,
+  disabled = false,
 }) => {
   if (totalPages <= 1) {
     return null;
@@ -35,12 +37,12 @@ export const ProductGridPagination: React.FC<ProductGridPaginationProps> = ({
             aria-label="Página anterior"
             onClick={(event) => {
               event.preventDefault();
-              if (currentPage > 1) {
+              if (!disabled && currentPage > 1) {
                 onPageChange(currentPage - 1);
               }
             }}
             className={`gap-1 px-2.5 sm:pl-2.5 ${
-              currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+              currentPage === 1 || disabled ? 'pointer-events-none opacity-50' : 'cursor-pointer'
             }`}
           >
             <ChevronLeft className="size-4" />
@@ -60,9 +62,11 @@ export const ProductGridPagination: React.FC<ProductGridPaginationProps> = ({
                 isActive={page === currentPage}
                 onClick={(event) => {
                   event.preventDefault();
-                  onPageChange(page);
+                  if (!disabled) {
+                    onPageChange(page);
+                  }
                 }}
-                className="cursor-pointer"
+                className={disabled ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
               >
                 {page}
               </PaginationLink>
@@ -77,12 +81,12 @@ export const ProductGridPagination: React.FC<ProductGridPaginationProps> = ({
             aria-label="Página siguiente"
             onClick={(event) => {
               event.preventDefault();
-              if (currentPage < totalPages) {
+              if (!disabled && currentPage < totalPages) {
                 onPageChange(currentPage + 1);
               }
             }}
             className={`gap-1 px-2.5 sm:pr-2.5 ${
-              currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+              currentPage === totalPages || disabled ? 'pointer-events-none opacity-50' : 'cursor-pointer'
             }`}
           >
             <span className="hidden sm:block">Siguiente</span>

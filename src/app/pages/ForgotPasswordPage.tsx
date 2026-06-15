@@ -2,20 +2,30 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, Mail } from 'lucide-react';
+import { AuthFormError } from '@/app/components/AuthFormError';
+import { validateRecoverEmail } from '@/app/utils/authErrors';
 import { useAuth } from '@/app/context/AuthContext';
 import logoColor from '@/assets/logo-bebify-color.svg';
 
 export const ForgotPasswordPage: React.FC = () => {
-  const { recoverPassword, loading, error, clearError } = useAuth();
+  const { recoverPassword, loading, errorDisplay, clearError } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    setFieldError(null);
 
-    const result = await recoverPassword(email);
+    const validationError = validateRecoverEmail(email);
+    if (validationError) {
+      setFieldError(validationError);
+      return;
+    }
+
+    const result = await recoverPassword(email.trim());
     if (result.success) {
       setSent(true);
     }
@@ -73,7 +83,7 @@ export const ForgotPasswordPage: React.FC = () => {
               </Link>
             </motion.div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-[#212121] mb-1.5">
                   Correo electrónico
@@ -81,21 +91,33 @@ export const ForgotPasswordPage: React.FC = () => {
                 <input
                   id="email"
                   type="email"
-                  required
+                  autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setFieldError(null);
+                    clearError();
+                  }}
                   placeholder="tu@correo.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0055a2] focus:border-transparent outline-none transition-all text-[#212121]"
+                  aria-invalid={Boolean(fieldError)}
+                  aria-describedby={fieldError ? 'recover-email-error' : undefined}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all text-[#212121] ${
+                    fieldError ? 'border-red-400 focus:ring-red-200' : 'border-gray-300 focus:ring-[#0055a2]'
+                  }`}
                 />
+                {fieldError && (
+                  <p id="recover-email-error" role="alert" className="mt-1.5 text-sm text-red-600">
+                    {fieldError}
+                  </p>
+                )}
               </div>
 
-              {error && (
+              {errorDisplay && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm"
                 >
-                  {error}
+                  <AuthFormError error={errorDisplay} />
                 </motion.div>
               )}
 

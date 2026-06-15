@@ -1,10 +1,11 @@
 import React from 'react';
-import { X, Plus, Minus, Trash2, ShoppingBag, Lock, AlertCircle } from 'lucide-react';
+import { X, Trash2, ShoppingBag, Lock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { formatMinimumOrderMessage } from '@/config/commerce';
+import { QuantityInput } from '@/app/components/QuantityInput';
 
 interface CartProps {
   isOpen: boolean;
@@ -21,8 +22,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
     getTotalPrice,
     getTotalItems,
     clearCart,
-    goToCheckout,
-    isShopifyCart,
     cartLoading,
     cartError,
     minimumOrderStatus,
@@ -33,27 +32,9 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
   const minimumOrderMessage = formatMinimumOrderMessage(minimumOrderStatus);
   const canCheckout = minimumOrderStatus.meetsMinimum;
 
-  const handleCheckout = async () => {
-    if (!isAuthenticated) {
-      onClose();
-      navigate('/login');
-      return;
-    }
-
-    if (!canCheckout) {
-      return;
-    }
-
-    if (isShopifyCart && goToCheckout) {
-      const redirected = await goToCheckout();
-      if (redirected) {
-        onClose();
-      }
-      return;
-    }
-
-    clearCart();
+  const handleViewCart = () => {
     onClose();
+    navigate('/carrito');
   };
 
   return (
@@ -144,25 +125,12 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                             Cantidad: <span className="font-semibold text-[#212121]">{item.packLabel ?? '1 Botella'}</span>
                           </p>
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => updateQuantity(itemId(item), item.quantity - 1)}
+                            <QuantityInput
+                              value={item.quantity}
+                              onChange={(nextQuantity) => updateQuantity(itemId(item), nextQuantity)}
+                              size="sm"
                               disabled={cartLoading}
-                              aria-label="Disminuir cantidad"
-                              className="bg-white border border-gray-200 p-1 rounded-md hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="text-[#212121] font-medium min-w-[1.5rem] text-center text-sm">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(itemId(item), item.quantity + 1)}
-                              disabled={cartLoading}
-                              aria-label="Aumentar cantidad"
-                              className="bg-white border border-gray-200 p-1 rounded-md hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
+                            />
                             <button
                               onClick={() => removeFromCart(itemId(item))}
                               disabled={cartLoading}
@@ -206,11 +174,11 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                     </div>
                     <p className="text-xs text-[#717182]">+ IVA al checkout</p>
                     <button
-                      onClick={handleCheckout}
-                      disabled={cartLoading || !canCheckout}
+                      onClick={handleViewCart}
+                      disabled={cartLoading}
                       className="w-full bg-[#0055a2] text-white py-3 rounded-lg hover:bg-[#004488] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold text-base"
                     >
-                      {isShopifyCart ? 'Ir a pagar' : 'Finalizar Compra'}
+                      Ver Carrito
                     </button>
                   </>
                 ) : (

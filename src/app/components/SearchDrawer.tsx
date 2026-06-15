@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Search, Plus, Minus, ShoppingCart, ShoppingBag, Check, Lock } from 'lucide-react';
+import { X, Search, ShoppingCart, ShoppingBag, Check, Lock } from 'lucide-react';
+import { QuantityInput } from '@/app/components/QuantityInput';
 import { motion, AnimatePresence } from 'motion/react';
 import { useShopifySearch } from '@/shopify/hooks/useShopifyProducts';
 import { useCart, type Product } from '@/app/context/CartContext';
@@ -68,7 +69,7 @@ export const SearchDrawer = ({ isOpen, onClose, onOpenCart }: SearchDrawerProps)
   const getQuantity = (productId: string) => quantities[productId] ?? 1;
 
   const setQuantity = (productId: string, qty: number) => {
-    setQuantities((prev) => ({ ...prev, [productId]: Math.max(1, qty) }));
+    setQuantities((prev) => ({ ...prev, [productId]: Math.min(99, Math.max(1, qty)) }));
   };
 
   const handleAdd = useCallback((product: ShopifyProduct) => {
@@ -280,25 +281,12 @@ export const SearchDrawer = ({ isOpen, onClose, onOpenCart }: SearchDrawerProps)
                                   <OutOfStockMessage compact />
                                 ) : (
                                 <div className="flex items-center gap-2">
-                                  {/* Quantity Selector */}
-                                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                                    <button
-                                      onClick={() => setQuantity(product.id, qty - 1)}
-                                      className="p-1.5 hover:bg-gray-100 transition-colors"
-                                      disabled={qty <= 1}
-                                    >
-                                      <Minus className="w-3.5 h-3.5" />
-                                    </button>
-                                    <span className="px-3 text-sm font-medium min-w-[2rem] text-center">
-                                      {qty}
-                                    </span>
-                                    <button
-                                      onClick={() => setQuantity(product.id, qty + 1)}
-                                      className="p-1.5 hover:bg-gray-100 transition-colors"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
+                                  <QuantityInput
+                                    value={qty}
+                                    onChange={(nextQuantity) => setQuantity(product.id, nextQuantity)}
+                                    variant="grouped"
+                                    size="sm"
+                                  />
 
                                   {/* Add to Cart */}
                                   <motion.button

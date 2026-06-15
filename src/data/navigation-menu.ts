@@ -26,6 +26,12 @@ export interface MenuAccordion {
 
 export type MenuItem = MenuLink | MenuAccordion;
 
+/** Ruta interna para un handle del menú (colección o catálogo completo). */
+export function getCategoryHref(handle: string): string {
+  if (handle === 'Todos') return '/productos';
+  return `/categorias/${handle}`;
+}
+
 export const MENU_ITEMS: MenuItem[] = [
   { type: 'link', label: 'Todos los productos', handle: 'Todos' },
   {

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { CartProvider } from '@/app/context/CartContext';
 import { WishlistProvider } from '@/app/context/WishlistContext';
 import { Header } from '@/app/components/Header';
@@ -15,15 +15,6 @@ export const MainLayout: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isSearchDrawerOpen, setIsSearchDrawerOpen] = useState(false);
-  const navigate = useNavigate();
-
-  const handleCategoryClick = (collectionHandle: string) => {
-    if (collectionHandle === 'Todos') {
-      navigate('/productos');
-    } else {
-      navigate(`/categorias/${collectionHandle}`);
-    }
-  };
 
   const handleCartAnimationComplete = useCallback(() => {
     if (!isSearchDrawerOpen) {
@@ -39,7 +30,6 @@ export const MainLayout: React.FC = () => {
             <Header
               onCartClick={() => setIsCartOpen(true)}
               onWishlistClick={() => setIsWishlistOpen(true)}
-              onCategoryClick={handleCategoryClick}
               searchDrawerOpen={isSearchDrawerOpen}
               onSearchDrawerChange={setIsSearchDrawerOpen}
             />

@@ -28,10 +28,15 @@ export function getVisiblePages(currentPage: number, totalPages: number): (numbe
   return pages;
 }
 
-export function useProductPagination<T>(items: T[]) {
+export function useProductPagination<T>(
+  items: T[],
+  options?: { hasMore?: boolean },
+) {
   const [currentPage, setCurrentPage] = useState(1);
+  const hasMore = options?.hasMore ?? false;
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PRODUCTS_PER_PAGE));
+  const loadedPages = Math.max(1, Math.ceil(items.length / PRODUCTS_PER_PAGE));
+  const totalPages = hasMore ? loadedPages + 1 : loadedPages;
 
   useEffect(() => {
     if (currentPage > totalPages) {
