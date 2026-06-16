@@ -4,7 +4,6 @@ import { motion } from 'motion/react';
 import {
   ChevronRight,
   Package,
-  ExternalLink,
   RefreshCw,
   LogIn,
   ShoppingBag,
@@ -179,17 +178,13 @@ export const AccountPage: React.FC = () => {
                       </ul>
                     )}
 
-                    {order.statusUrl && (
-                      <a
-                        href={order.statusUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0055a2] hover:text-[#004488] hover:underline"
-                      >
-                        Ver detalle del pedido
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
+                    <Link
+                      to={`/pedidos/${order.orderNumber}`}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0055a2] hover:text-[#004488] hover:underline"
+                    >
+                      Ver detalle del pedido
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
                   </motion.article>
                 ))}
 

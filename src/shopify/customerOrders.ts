@@ -3,6 +3,11 @@ import { getStorefrontApiUrl, shopifyConfig, isShopifyConfigured } from './confi
 export interface CustomerOrderLineItem {
   title: string;
   quantity: number;
+  variantId?: string;
+  productHandle?: string;
+  imageUrl?: string;
+  unitPrice?: number;
+  availableForSale?: boolean;
 }
 
 export interface CustomerOrder {
@@ -47,11 +52,26 @@ const GET_CUSTOMER_ORDERS = `
               amount
               currencyCode
             }
-            lineItems(first: 8) {
+            lineItems(first: 50) {
               edges {
                 node {
                   title
                   quantity
+                  originalTotalPrice {
+                    amount
+                    currencyCode
+                  }
+                  variant {
+                    id
+                    availableForSale
+                    image {
+                      url
+                    }
+                    product {
+                      handle
+                      title
+                    }
+                  }
                 }
               }
             }
@@ -102,6 +122,45 @@ export const formatOrderDate = (iso: string): string => {
   }
 };
 
+function mapOrderLineItem(line: Record<string, unknown>): CustomerOrderLineItem {
+  const quantity = line.quantity as number;
+  const originalTotal = line.originalTotalPrice as { amount: string } | undefined;
+  const variant = line.variant as Record<string, unknown> | null | undefined;
+  const product = variant?.product as { handle?: string } | undefined;
+  const image = variant?.image as { url?: string } | undefined;
+
+  return {
+    title: line.title as string,
+    quantity,
+    variantId: variant?.id as string | undefined,
+    productHandle: product?.handle,
+    imageUrl: image?.url,
+    unitPrice:
+      quantity > 0 && originalTotal?.amount
+        ? parseFloat(originalTotal.amount) / quantity
+        : undefined,
+    availableForSale: variant?.availableForSale as boolean | undefined,
+  };
+}
+
+function mapOrderNode(node: Record<string, unknown>): CustomerOrder {
+  const price = node.currentTotalPrice as { amount: string; currencyCode: string };
+  const lineEdges = (node.lineItems as { edges: Array<{ node: Record<string, unknown> }> })?.edges ?? [];
+
+  return {
+    id: node.id as string,
+    name: node.name as string,
+    orderNumber: node.orderNumber as number,
+    processedAt: node.processedAt as string,
+    financialStatus: node.financialStatus as string,
+    fulfillmentStatus: node.fulfillmentStatus as string,
+    statusUrl: node.statusUrl as string,
+    totalPrice: parseFloat(price.amount),
+    currencyCode: price.currencyCode,
+    lineItems: lineEdges.map(({ node: line }) => mapOrderLineItem(line)),
+  };
+}
+
 export const fetchCustomerOrdersPage = async (
   customerAccessToken: string,
   first: number = 10,
@@ -144,26 +203,7 @@ export const fetchCustomerOrdersPage = async (
 
     return {
       numberOfOrders: customer.numberOfOrders ?? edges.length,
-      orders: edges.map(({ node }: { node: Record<string, unknown> }) => {
-        const price = node.currentTotalPrice as { amount: string; currencyCode: string };
-        const lineEdges = (node.lineItems as { edges: Array<{ node: CustomerOrderLineItem }> })?.edges ?? [];
-
-        return {
-          id: node.id as string,
-          name: node.name as string,
-          orderNumber: node.orderNumber as number,
-          processedAt: node.processedAt as string,
-          financialStatus: node.financialStatus as string,
-          fulfillmentStatus: node.fulfillmentStatus as string,
-          statusUrl: node.statusUrl as string,
-          totalPrice: parseFloat(price.amount),
-          currencyCode: price.currencyCode,
-          lineItems: lineEdges.map(({ node: line }) => ({
-            title: line.title,
-            quantity: line.quantity,
-          })),
-        };
-      }),
+      orders: edges.map(({ node }: { node: Record<string, unknown> }) => mapOrderNode(node)),
       hasNextPage: customer.orders?.pageInfo?.hasNextPage ?? false,
       endCursor: customer.orders?.pageInfo?.endCursor ?? null,
     };
@@ -171,4 +211,35 @@ export const fetchCustomerOrdersPage = async (
     console.error('Error fetching customer orders:', error);
     return null;
   }
+};
+
+export const fetchCustomerOrderByNumber = async (
+  customerAccessToken: string,
+  orderNumber: number,
+): Promise<CustomerOrder | null> => {
+  if (!Number.isFinite(orderNumber)) {
+    return null;
+  }
+
+  let after: string | null = null;
+
+  for (let pageIndex = 0; pageIndex < 20; pageIndex += 1) {
+    const page = await fetchCustomerOrdersPage(customerAccessToken, 25, after);
+    if (!page) {
+      return null;
+    }
+
+    const found = page.orders.find((order) => order.orderNumber === orderNumber);
+    if (found) {
+      return found;
+    }
+
+    if (!page.hasNextPage || !page.endCursor) {
+      return null;
+    }
+
+    after = page.endCursor;
+  }
+
+  return null;
 };

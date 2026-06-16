@@ -14,6 +14,8 @@ import {
 import { normalizeHeliumRevision } from '@/integrations/helium/normalizeHeliumRevision';
 import { patchHeliumUploadFetch } from '@/integrations/helium/patchHeliumUploadFetch';
 
+const HELIUM_MOUNTED_ATTR = 'data-bebify-helium-mounted';
+
 type HeliumFormPayload = {
   form: {
     id: string;
@@ -180,7 +182,7 @@ export async function mountHeliumForm(
   formId: string,
   options: { updatedAt?: number; redirectUrl?: string } = {},
 ): Promise<void> {
-  if (formElement.getAttribute('data-cf-state') === 'mounted') {
+  if (formElement.getAttribute(HELIUM_MOUNTED_ATTR) === 'true') {
     return;
   }
 
@@ -229,15 +231,30 @@ export async function mountHeliumForm(
 
   heliumWindow.CF!.entrypoints = [entrypoint];
 
-  if (typeof heliumWindow.CF?.mountForm === 'function') {
+  const heliumInitialized = document.documentElement.getAttribute('data-cf-initialized') === 'true';
+
+  if (heliumInitialized && typeof heliumWindow.CF?.mountForm === 'function') {
     heliumWindow.CF.mountForm(entrypoint.form);
-    return;
+    await waitForFormElementReady(formElement);
+  } else {
+    const readyPromise = waitForHeliumReady();
+    document.dispatchEvent(new CustomEvent('cf:entrypoints_ready'));
+    await readyPromise;
+    await waitForFormElementReady(formElement);
   }
 
-  await new Promise<void>((resolve, reject) => {
+  formElement.setAttribute(HELIUM_MOUNTED_ATTR, 'true');
+}
+
+function waitForHeliumReady(timeoutMs = 20000): Promise<void> {
+  if (document.documentElement.getAttribute('data-cf-initialized') === 'true') {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
     const timeoutId = window.setTimeout(() => {
       reject(new Error('Helium Customer Fields no respondió a tiempo.'));
-    }, 15000);
+    }, timeoutMs);
 
     const handleReady = () => {
       window.clearTimeout(timeoutId);
@@ -245,6 +262,28 @@ export async function mountHeliumForm(
     };
 
     document.addEventListener('cf:ready', handleReady, { once: true });
-    document.dispatchEvent(new CustomEvent('cf:entrypoints_ready'));
+  });
+}
+
+function waitForFormElementReady(formElement: HTMLFormElement, timeoutMs = 20000): Promise<void> {
+  if (formElement.getAttribute('data-cf-state') === 'ready') {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      observer.disconnect();
+      reject(new Error('El formulario de registro no terminó de cargar.'));
+    }, timeoutMs);
+
+    const observer = new MutationObserver(() => {
+      if (formElement.getAttribute('data-cf-state') === 'ready') {
+        observer.disconnect();
+        window.clearTimeout(timeoutId);
+        resolve();
+      }
+    });
+
+    observer.observe(formElement, { attributes: true, attributeFilter: ['data-cf-state'] });
   });
 }

@@ -18,6 +18,7 @@ import { CookiePolicyPage } from '@/app/pages/CookiePolicyPage';
 import { AdminBannersPage } from '@/app/pages/AdminBannersPage';
 import { SearchResultsPage } from '@/app/pages/SearchResultsPage';
 import { AccountPage } from '@/app/pages/AccountPage';
+import { OrderDetailPage } from '@/app/pages/OrderDetailPage';
 import { CartPage } from '@/app/pages/CartPage';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
               <Route path="/carrito" element={<CartPage />} />
               <Route path="/cuenta" element={<AccountPage />} />
               <Route path="/pedidos" element={<AccountPage />} />
+              <Route path="/pedidos/:orderNumber" element={<OrderDetailPage />} />
               <Route path="/categorias/:handle" element={<CollectionPage />} />
               <Route path="/producto/:handle" element={<ProductPage />} />
               <Route path="/blog" element={<BlogPage />} />

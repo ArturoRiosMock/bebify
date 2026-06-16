@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   getOrCreateCart,
   addToShopifyCart,
+  addLinesToShopifyCart,
   updateCartLine,
   removeFromShopifyCart,
   updateCartBuyerIdentity,
@@ -129,6 +130,50 @@ export const useShopifyCart = () => {
     } catch (err) {
       console.error('Error adding item to cart:', err);
       setError('Error al agregar producto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addItems = async (items: Array<{ variantId: string; quantity: number }>) => {
+    if (!isShopifyConfigured() || items.length === 0) {
+      return false;
+    }
+
+    let currentCart = cart;
+
+    if (!currentCart) {
+      currentCart = await getOrCreateCart(customerAccessToken);
+      if (!currentCart) {
+        setError('No se pudo crear el carrito');
+        return false;
+      }
+      setCart(currentCart);
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const updatedCart = await addLinesToShopifyCart(
+        currentCart.id,
+        items.map((item) => ({
+          merchandiseId: item.variantId,
+          quantity: item.quantity,
+        })),
+      );
+
+      if (updatedCart) {
+        setCart(updatedCart);
+        return true;
+      }
+
+      setError('No se pudieron agregar los productos');
+      return false;
+    } catch (err) {
+      console.error('Error adding items to cart:', err);
+      setError('Error al agregar productos');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -271,6 +316,7 @@ export const useShopifyCart = () => {
     loading,
     error,
     addItem,
+    addItems,
     updateItem,
     removeItem,
     removeAllItems,

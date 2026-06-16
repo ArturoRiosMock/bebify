@@ -32,9 +32,13 @@ export const heliumShopDomain = shopifyConfig.storeDomain;
 
 export const heliumAssetBaseUrl = `https://static.customerfields.com/releases/${HELIUM_CF_VERSION}`;
 
-/** Ruta relativa al app proxy de Helium (misma que en el tema Shopify). Debe ir antes del catch-all SPA en Vercel. */
+/** Ruta relativa servida por Vercel (rewrite → bebify.store). Debe ir antes del catch-all SPA. */
 export const HELIUM_PROXY_PATH = '/tools/customr';
 
+/** URL absoluta del app proxy en el dominio primario de Shopify (evita 301 myshopify → bebify.store). */
+export const heliumProxyAbsoluteUrl = `https://bebify.store${HELIUM_PROXY_PATH}`;
+
+/** Helium lee proxyPath al inicializar; la ruta relativa funciona en bebify.mx vía rewrite de Vercel. */
 export const heliumProxyUrl = HELIUM_PROXY_PATH;
 
 export const heliumFormApiUrl = (formId: string, updatedAt: number) =>

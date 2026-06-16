@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/tools/customr/:path*",
-      "destination": "https://mr-brown-mayoreo.myshopify.com/tools/customr/:path*"
+      "destination": "https://bebify.store/tools/customr/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

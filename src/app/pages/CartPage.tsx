@@ -6,6 +6,10 @@ import { useCart } from '@/app/context/CartContext';
 import { useAuth } from '@/app/context/AuthContext';
 import { formatMinimumOrderMessage } from '@/config/commerce';
 import { QuantityInput } from '@/app/components/QuantityInput';
+import {
+  CartLineWholesalePrice,
+  CartWholesaleSubtotal,
+} from '@/app/components/CartWholesalePrice';
 
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,7 +18,6 @@ export const CartPage: React.FC = () => {
     cartItems,
     removeFromCart,
     updateQuantity,
-    getTotalPrice,
     getTotalItems,
     clearCart,
     goToCheckout,
@@ -23,6 +26,9 @@ export const CartPage: React.FC = () => {
     cartError,
     minimumOrderStatus,
     minimumOrderLabel,
+    wholesalePrices,
+    wholesalePricesLoading,
+    hasWholesalePrices,
   } = useCart();
 
   const itemId = (item: { lineId?: string; id: number | string }) => item.lineId ?? item.id;
@@ -116,7 +122,15 @@ export const CartPage: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-medium text-[#212121] line-clamp-2 mb-1">{item.name}</h3>
                       {isAuthenticated ? (
-                        <p className="text-[#0055a2] font-bold mb-1">${item.price.toFixed(2)} MXN</p>
+                        wholesalePricesLoading ? (
+                          <p className="text-sm text-[#717182] mb-1">Calculando precio B2B…</p>
+                        ) : (
+                          <CartLineWholesalePrice
+                            item={item}
+                            prices={wholesalePrices}
+                            className="mb-1"
+                          />
+                        )
                       ) : (
                         <button
                           type="button"
@@ -165,10 +179,19 @@ export const CartPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-[#212121]">
+                  <div className="flex items-center justify-between text-[#212121] gap-4">
                     <span className="font-medium">Subtotal:</span>
-                    <span className="text-[#0055a2] text-2xl font-bold">${getTotalPrice().toFixed(2)} MXN</span>
+                    {wholesalePricesLoading ? (
+                      <span className="text-sm text-[#717182]">Calculando…</span>
+                    ) : (
+                      <CartWholesaleSubtotal items={cartItems} prices={wholesalePrices} />
+                    )}
                   </div>
+                  {hasWholesalePrices && !wholesalePricesLoading && (
+                    <p className="text-xs text-green-700">
+                      Los descuentos B2B se aplican al confirmar el pedido.
+                    </p>
+                  )}
                   <p className="text-xs text-[#717182]">+ IVA al checkout</p>
                   <button
                     onClick={handleCheckout}

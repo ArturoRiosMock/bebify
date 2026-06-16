@@ -71,15 +71,24 @@ export const addToShopifyCart = async (
   variantId: string,
   quantity: number = 1
 ): Promise<ShopifyCart | null> => {
+  return addLinesToShopifyCart(cartId, [{ merchandiseId: variantId, quantity }]);
+};
+
+export const addLinesToShopifyCart = async (
+  cartId: string,
+  lines: Array<{ merchandiseId: string; quantity: number }>,
+): Promise<ShopifyCart | null> => {
+  if (lines.length === 0) {
+    return null;
+  }
+
   try {
     const data: any = await shopifyClient.request(ADD_TO_CART, {
       cartId,
-      lines: [
-        {
-          merchandiseId: variantId,
-          quantity
-        }
-      ]
+      lines: lines.map((line) => ({
+        merchandiseId: line.merchandiseId,
+        quantity: line.quantity,
+      })),
     });
 
     if (data.cartLinesAdd.userErrors.length > 0) {

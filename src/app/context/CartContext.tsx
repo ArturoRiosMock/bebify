@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
 import { useShopifyCart } from '@/shopify/hooks/useShopifyCart';
+import { useWholesalePrices } from '@/shopify/hooks/useWholesalePrices';
 import { isShopifyConfigured } from '@/shopify/config';
 import { resolvePackLabel } from '@/shopify/packLabel';
+import { useAuth } from '@/app/context/AuthContext';
+import {
+  computeCartWholesaleSummary,
+  type WholesalePriceMap,
+} from '@/app/utils/cartWholesalePricing';
 import {
   getMinimumOrderStatus,
   MIN_ORDER_LABEL,
@@ -41,16 +47,22 @@ interface CartContextType {
   getTotalPrice: () => number;
   getTotalItems: () => number;
   goToCheckout?: () => Promise<boolean>;
+  reorderItems?: (items: Array<{ variantId: string; quantity: number }>) => Promise<boolean>;
   isShopifyCart: boolean;
   cartLoading: boolean;
   cartError: string | null;
   minimumOrderStatus: MinimumOrderStatus;
   minimumOrderLabel: string;
+  wholesalePrices: WholesalePriceMap;
+  wholesalePricesLoading: boolean;
+  hasWholesalePrices: boolean;
+  retailSubtotal: number;
+  wholesaleSavings: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-function mapShopifyCartToItems(cart: { lines: { edges: Array<{ node: { id: string; quantity: number; merchandise: { title: string; product: { title: string }; image: { url: string } | null; price: { amount: string } } } }> }; } | null): CartItem[] {
+function mapShopifyCartToItems(cart: { lines: { edges: Array<{ node: { id: string; quantity: number; merchandise: { id?: string; title: string; product: { title: string }; image: { url: string } | null; price: { amount: string } } } }> }; } | null): CartItem[] {
   if (!cart?.lines?.edges) return [];
   return cart.lines.edges.map(({ node }) => ({
     id: node.id,
@@ -61,12 +73,14 @@ function mapShopifyCartToItems(cart: { lines: { edges: Array<{ node: { id: strin
     description: '',
     quantity: node.quantity,
     lineId: node.id,
+    variantId: node.merchandise.id,
     packLabel: resolvePackLabel({ title: node.merchandise.title }),
   }));
 }
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [localCartItems, setLocalCartItems] = useState<CartItem[]>([]);
+  const { user, isAuthenticated } = useAuth();
   const shopify = useShopifyCart();
 
   const isShopify = isShopifyConfigured() && shopify.isConfigured;
@@ -77,6 +91,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
     return localCartItems;
   }, [isShopify, shopify.cart, localCartItems]);
+
+  const variantIds = useMemo(
+    () => cartItems.map((item) => item.variantId).filter(Boolean) as string[],
+    [cartItems],
+  );
+
+  const {
+    prices: wholesalePrices,
+    hasWholesale: hasWholesalePrices,
+    loading: wholesalePricesLoading,
+  } = useWholesalePrices(isAuthenticated ? user?.accessToken : undefined, variantIds);
+
+  const pricingSummary = useMemo(
+    () => computeCartWholesaleSummary(cartItems, wholesalePrices),
+    [cartItems, wholesalePrices],
+  );
 
   const addToCart = (product: Product, quantity: number = 1) => {
     if (!isProductInStock(product)) {
@@ -137,22 +167,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setLocalCartItems([]);
   };
 
-  const getTotalPrice = (): number => {
-    if (isShopify) return shopify.getSubtotal();
-    return localCartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  };
+  const getTotalPrice = (): number => pricingSummary.effectiveSubtotal;
 
   const getTotalItems = (): number => {
     if (isShopify) return shopify.getTotalItems();
     return localCartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const cartSubtotal = useMemo(() => {
-    if (isShopify && shopify.cart) {
-      return shopify.getSubtotal();
-    }
-    return localCartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  }, [isShopify, shopify.cart, localCartItems]);
+  const cartSubtotal = pricingSummary.effectiveSubtotal;
 
   const minimumOrderStatus = useMemo(
     () => getMinimumOrderStatus(cartSubtotal),
@@ -171,6 +193,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return true;
   }, [isShopify, minimumOrderStatus.meetsMinimum, shopify]);
 
+  const handleReorderItems = useCallback(
+    async (items: Array<{ variantId: string; quantity: number }>): Promise<boolean> => {
+      if (!isShopify) {
+        return false;
+      }
+
+      return shopify.addItems(items);
+    },
+    [isShopify, shopify],
+  );
+
   const value: CartContextType = {
     cartItems,
     addToCart,
@@ -180,11 +213,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     getTotalPrice,
     getTotalItems,
     goToCheckout: isShopify ? handleGoToCheckout : undefined,
+    reorderItems: isShopify ? handleReorderItems : undefined,
     isShopifyCart: isShopify,
     cartLoading: shopify.loading,
     cartError: shopify.error,
     minimumOrderStatus,
     minimumOrderLabel: MIN_ORDER_LABEL,
+    wholesalePrices,
+    wholesalePricesLoading,
+    hasWholesalePrices,
+    retailSubtotal: pricingSummary.retailSubtotal,
+    wholesaleSavings: pricingSummary.savings,
   };
 
   return (

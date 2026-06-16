@@ -20,7 +20,7 @@ export const HeliumRegistrationForm: React.FC<HeliumRegistrationFormProps> = ({
     const wrapperElement = wrapperRef.current;
     if (!formElement || !wrapperElement) return;
 
-    if (formElement.getAttribute('data-cf-state') === 'mounted') {
+    if (formElement.getAttribute('data-bebify-helium-mounted') === 'true') {
       setLoading(false);
       return;
     }
@@ -41,7 +41,7 @@ export const HeliumRegistrationForm: React.FC<HeliumRegistrationFormProps> = ({
     const mount = async () => {
       try {
         await mountHeliumForm(formElement, HELIUM_REGISTRATION_FORM_ID, { redirectUrl });
-        if (!cancelled && formElement.getAttribute('data-cf-state') === 'mounted') {
+        if (!cancelled && formElement.getAttribute('data-bebify-helium-mounted') === 'true') {
           setLoading(false);
           stopFileEnhancer?.();
           stopFileEnhancer = enhanceHeliumFileFields(wrapperElement);
