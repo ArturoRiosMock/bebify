@@ -194,7 +194,9 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                         />
                       )}
                     </div>
-                    <p className="text-xs text-[#717182]">+ IVA al checkout</p>
+                    <p className="text-xs text-[#717182]">
+                      Los impuestos aplicables se calcularán al momento de finalizar tu pedido
+                    </p>
                     <button
                       onClick={handleViewCart}
                       disabled={cartLoading}

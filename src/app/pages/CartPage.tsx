@@ -192,7 +192,9 @@ export const CartPage: React.FC = () => {
                       Los descuentos B2B se aplican al confirmar el pedido.
                     </p>
                   )}
-                  <p className="text-xs text-[#717182]">+ IVA al checkout</p>
+                  <p className="text-xs text-[#717182]">
+                    Los impuestos aplicables se calcularán al momento de finalizar tu pedido
+                  </p>
                   <button
                     onClick={handleCheckout}
                     disabled={cartLoading || !canCheckout}
