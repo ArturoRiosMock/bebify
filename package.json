@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite",
-    "check:helium-registration": "node scripts/check-helium-registration-form.mjs"
+    "dev": "vite"
   },
   "dependencies": {
     "react": "18.3.1",

@@ -3,7 +3,7 @@ import {
   HELIUM_FORM_UPDATED_AT,
   HELIUM_CAPTCHA_SITE_KEY,
   heliumAssetBaseUrl,
-  heliumFormLatestApiUrl,
+  heliumFormApiUrl,
   heliumProxyUrl,
   heliumShopDomain,
 } from '@/integrations/helium/config';
@@ -11,8 +11,6 @@ import {
   HELIUM_MEXICO_COUNTRIES,
   HELIUM_MEXICO_COUNTRY_OPTION,
 } from '@/integrations/helium/countryOptions';
-import { normalizeHeliumRevision } from '@/integrations/helium/normalizeHeliumRevision';
-import { patchHeliumUploadFetch } from '@/integrations/helium/patchHeliumUploadFetch';
 
 type HeliumFormPayload = {
   form: {
@@ -139,19 +137,8 @@ function loadScript(src: string) {
   });
 }
 
-type HeliumRevision = {
-  updated_at?: string;
-  [key: string]: unknown;
-};
-
-function revisionUpdatedAtUnix(revision: HeliumRevision): number {
-  if (!revision.updated_at) return HELIUM_FORM_UPDATED_AT;
-  const timestamp = Math.floor(new Date(revision.updated_at).getTime() / 1000);
-  return Number.isFinite(timestamp) ? timestamp : HELIUM_FORM_UPDATED_AT;
-}
-
-async function fetchFormData(formId: string): Promise<HeliumFormPayload | null> {
-  const response = await fetch(heliumFormLatestApiUrl(formId), {
+async function fetchFormData(formId: string, updatedAt: number): Promise<HeliumFormPayload | null> {
+  const response = await fetch(heliumFormApiUrl(formId, updatedAt), {
     headers: {
       'X-Shopify-Shop-Domain': heliumShopDomain,
     },
@@ -180,6 +167,7 @@ export async function mountHeliumForm(
   formId: string,
   options: { updatedAt?: number; redirectUrl?: string } = {},
 ): Promise<void> {
+  const updatedAt = options.updatedAt ?? HELIUM_FORM_UPDATED_AT;
   const redirectUrl = options.redirectUrl ?? '/login?registered=1';
 
   ensureHeliumGlobals(formId);
@@ -187,20 +175,15 @@ export async function mountHeliumForm(
 
   document.documentElement.setAttribute('data-cf-initialized', 'loading');
 
-  const formPayload = await fetchFormData(formId);
+  const formPayload = await fetchFormData(formId, updatedAt);
   if (!formPayload) {
     throw new Error('No se pudo cargar la configuración del formulario de registro.');
   }
-
-  const updatedAt = options.updatedAt ?? revisionUpdatedAtUnix(formPayload.revision as HeliumRevision);
 
   if (formPayload.form.target === 'customer-account') {
     throw new Error('Este formulario no es compatible con el registro en la tienda.');
   }
 
-  const normalizedRevision = normalizeHeliumRevision(formPayload.revision);
-
-  patchHeliumUploadFetch(heliumShopDomain);
   loadStylesheet(`${heliumAssetBaseUrl}/customer-fields.css`);
   await loadScript(`${heliumAssetBaseUrl}/customer-fields.js`);
 
@@ -219,9 +202,15 @@ export async function mountHeliumForm(
     },
     form: {
       ...formPayload.form,
-      currentRevision: normalizedRevision,
+      currentRevision: formPayload.revision,
     },
   };
+
+  if (heliumWindow.CF?.entrypoints?.length) {
+    heliumWindow.CF.entrypoints.push(entrypoint);
+    heliumWindow.CF.mountForm?.(entrypoint.form);
+    return;
+  }
 
   heliumWindow.CF!.entrypoints = [entrypoint];
 

@@ -93,8 +93,8 @@ const faqs: FAQItem[] = [
           este vínculo
         </Link>{' '}
         y regístrate directamente para comenzar a aprovechar todos los beneficios de trabajar con
-        Bebify. Solo necesitas llenar el formulario y subir tu Constancia de razón social en PDF en
-        el paso Datos de Facturación.
+        Bebify, solo necesitas llenar un formulario, tu Constancia de Situación Fiscal y Opinión de
+        Cumplimiento.
       </>
     )
   },
