@@ -2,7 +2,55 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "redirects": [
+    {
+      "source": "/products/:handle",
+      "destination": "/producto/:handle",
+      "permanent": true
+    },
+    {
+      "source": "/collections/:handle",
+      "destination": "/categorias/:handle",
+      "permanent": true
+    },
+    {
+      "source": "/policies/privacy-policy",
+      "destination": "/aviso-de-privacidad",
+      "permanent": true
+    },
+    {
+      "source": "/policies/refund-policy",
+      "destination": "/politica-de-reembolso",
+      "permanent": true
+    },
+    {
+      "source": "/policies/terms-of-service",
+      "destination": "/terminos-de-servicio",
+      "permanent": true
+    },
+    {
+      "source": "/sobre-nosotros",
+      "destination": "/page/sobre-nosotros",
+      "permanent": true
+    },
+    {
+      "source": "/blogs/:blogHandle/:handle",
+      "destination": "/blog/:handle",
+      "permanent": true
+    },
+    {
+      "source": "/blogs/:blogHandle",
+      "destination": "/blog",
+      "permanent": true
+    },
+    {
+      "source": "/search",
+      "destination": "/buscar",
+      "permanent": false
+    }
+  ],
   "rewrites": [
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
