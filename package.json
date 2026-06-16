@@ -6,7 +6,9 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "check:helium-registration": "node scripts/check-helium-registration-form.mjs"
+    "check:helium-registration": "node scripts/check-helium-registration-form.mjs",
+    "sync:wholesale-pricing": "node scripts/sync-wholesale-pricing.mjs",
+    "import:wholesale-csv": "node scripts/import-wholesale-csv.mjs"
   },
   "dependencies": {
     "react": "18.3.1",
