@@ -4,17 +4,7 @@ const PATCH_FLAG = '__bebifyHeliumUploadPatched';
 type UploadJson = {
   url?: string;
   key?: string;
-  error?: string;
-  errors?: string[];
 };
-
-async function readUploadJson(response: Response): Promise<UploadJson | null> {
-  try {
-    return (await response.clone().json()) as UploadJson;
-  } catch {
-    return null;
-  }
-}
 
 function getRequestUrl(input: RequestInfo | URL): string {
   if (typeof input === 'string') return input;
@@ -30,11 +20,19 @@ function cloneFormData(formData: FormData): FormData {
   return clone;
 }
 
-function trimFormDataDomain(formData: FormData, shopDomain: string) {
-  formData.set('customer[domain]', shopDomain);
+async function readUploadJson(response: Response): Promise<UploadJson | null> {
+  try {
+    return (await response.clone().json()) as UploadJson;
+  } catch {
+    return null;
+  }
 }
 
-async function requestUpload(
+function uploadSucceeded(response: Response, json: UploadJson | null): boolean {
+  return response.ok && Boolean(json?.url);
+}
+
+async function tryUpload(
   originalFetch: typeof fetch,
   input: RequestInfo | URL,
   init: RequestInit | undefined,
@@ -48,13 +46,9 @@ async function requestUpload(
   });
 }
 
-function uploadHasFile(response: Response, json: UploadJson | null): boolean {
-  return response.ok && Boolean(json?.url);
-}
-
 /**
- * Helium sube archivos vía fetch. Si file_reference falla o la respuesta no es JSON,
- * reintenta con columnType=file y normaliza el dominio de la tienda.
+ * Normaliza dominio de tienda en subidas. Reintenta tipos de columna sin lanzar errores
+ * para no interrumpir el flujo nativo de Helium (como en el preview del admin).
  */
 export function patchHeliumUploadFetch(shopDomain: string): void {
   const globalWindow = window as Window & { [PATCH_FLAG]?: boolean };
@@ -71,28 +65,28 @@ export function patchHeliumUploadFetch(shopDomain: string): void {
     }
 
     const initialFormData = cloneFormData(init.body);
-    trimFormDataDomain(initialFormData, normalizedDomain);
+    initialFormData.set('customer[domain]', normalizedDomain);
 
-    let response = await requestUpload(originalFetch, input, init, initialFormData);
-    let json = await readUploadJson(response);
+    const columnTypes = new Set<string>();
+    const initialType = String(initialFormData.get('customer[columnType]') ?? 'file');
+    columnTypes.add(initialType);
+    columnTypes.add(initialType === 'file' ? 'file_reference' : 'file');
 
-    if (uploadHasFile(response, json)) {
-      return response;
+    let lastResponse: Response | null = null;
+
+    for (const columnType of columnTypes) {
+      const formData = cloneFormData(initialFormData);
+      formData.set('customer[columnType]', columnType);
+      const response = await tryUpload(originalFetch, input, init, formData);
+      const json = await readUploadJson(response);
+      lastResponse = response;
+
+      if (uploadSucceeded(response, json)) {
+        return response;
+      }
     }
 
-    const columnType = initialFormData.get('customer[columnType]');
-    if (columnType !== 'file') {
-      const retryFormData = cloneFormData(initialFormData);
-      retryFormData.set('customer[columnType]', 'file');
-      response = await requestUpload(originalFetch, input, init, retryFormData);
-      json = await readUploadJson(response);
-    }
-
-    if (!uploadHasFile(response, json)) {
-      throw new Error('No se pudo subir el archivo PDF. Verifica que sea un PDF válido e intenta de nuevo.');
-    }
-
-    return response;
+    return lastResponse ?? originalFetch(input, init);
   };
 
   globalWindow[PATCH_FLAG] = true;

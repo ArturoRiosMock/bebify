@@ -180,6 +180,10 @@ export async function mountHeliumForm(
   formId: string,
   options: { updatedAt?: number; redirectUrl?: string } = {},
 ): Promise<void> {
+  if (formElement.getAttribute('data-cf-state') === 'mounted') {
+    return;
+  }
+
   const redirectUrl = options.redirectUrl ?? '/login?registered=1';
 
   ensureHeliumGlobals(formId);

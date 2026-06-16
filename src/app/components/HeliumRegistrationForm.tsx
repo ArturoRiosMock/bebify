@@ -20,6 +20,11 @@ export const HeliumRegistrationForm: React.FC<HeliumRegistrationFormProps> = ({
     const wrapperElement = wrapperRef.current;
     if (!formElement || !wrapperElement) return;
 
+    if (formElement.getAttribute('data-cf-state') === 'mounted') {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     let stopFileEnhancer: (() => void) | undefined;
 

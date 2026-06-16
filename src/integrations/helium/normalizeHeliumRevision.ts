@@ -1,19 +1,12 @@
 type HeliumField = {
   type?: string;
   settings?: {
-    storageLocation?: string;
     description?: string;
-    [key: string]: unknown;
-  };
-  dataColumn?: {
-    dataType?: string;
     [key: string]: unknown;
   };
   validations?: Array<{
     operator?: string;
-    comparand?: unknown;
     errorMessage?: string;
-    metadata?: Record<string, unknown>;
   }>;
   [key: string]: unknown;
 };
@@ -31,13 +24,8 @@ const FILE_ERROR_MESSAGES: Record<string, string> = {
 };
 
 function normalizeFileField(field: HeliumField) {
-  field.settings = { ...field.settings };
-  field.dataColumn = field.dataColumn ? { ...field.dataColumn } : undefined;
+  field.settings = field.settings ? { ...field.settings } : {};
   field.validations = field.validations?.map((validation) => ({ ...validation })) ?? [];
-
-  if (field.settings.storageLocation === 'file' && field.dataColumn?.dataType === 'file_reference') {
-    field.dataColumn.dataType = 'file';
-  }
 
   if (!field.settings.description?.trim()) {
     field.settings.description = 'Sube tu constancia en formato PDF (máximo 20 MB).';
@@ -47,21 +35,12 @@ function normalizeFileField(field: HeliumField) {
     const message = FILE_ERROR_MESSAGES[validation.operator ?? ''];
     if (message) validation.errorMessage = message;
   }
-
-  const hasPdfRule = field.validations.some(
-    (validation) => validation.operator === 'file_extension_equals',
-  );
-
-  if (!hasPdfRule) {
-    field.validations.push({
-      operator: 'file_extension_equals',
-      comparand: 'pdf',
-      errorMessage: FILE_ERROR_MESSAGES.file_extension_equals,
-      metadata: { mandatory: true },
-    });
-  }
 }
 
+/**
+ * Solo traduce mensajes y descripción. No altera dataType ni reglas de validación
+ * para que el comportamiento coincida con el preview de Helium Admin.
+ */
 export function normalizeHeliumRevision(revision: HeliumRevision): HeliumRevision {
   if (!Array.isArray(revision.fields)) return revision;
 
@@ -70,7 +49,6 @@ export function normalizeHeliumRevision(revision: HeliumRevision): HeliumRevisio
     const copy: HeliumField = {
       ...field,
       settings: field.settings ? { ...field.settings } : undefined,
-      dataColumn: field.dataColumn ? { ...field.dataColumn } : undefined,
       validations: field.validations?.map((validation) => ({ ...validation })),
     };
     normalizeFileField(copy);
