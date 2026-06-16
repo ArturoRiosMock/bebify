@@ -212,7 +212,9 @@
   width: 100%;
 }
 
-.helium-registration-form .cf-file-preview-container input[type='file'] {
+.helium-registration-form .cf-field input[type='file'] {
+  display: block;
+  width: 100%;
   min-height: var(--bebify-input-min-height);
   padding: var(--bebify-input-padding-y) var(--bebify-input-padding-x);
   border: 1px solid var(--bebify-border);
@@ -220,6 +222,10 @@
   background-color: #fff;
   font-size: 0.875rem;
   cursor: pointer;
+}
+
+.helium-registration-form .cf-file-preview-container input[type='file'] {
+  width: 100%;
 }
 
 .helium-registration-form .cf-file-preview-container .cf-file-preview {
@@ -265,6 +271,12 @@
   left: 0.4375rem;
   width: 0.875rem;
   background: #b91c1c;
+}
+
+.helium-registration-form .bebify-file-upload-error {
+  margin-top: 0.5rem;
+  color: #b91c1c;
+  font-size: 0.875rem;
 }
 
 .helium-registration-form .bebify-file-clear-btn {
