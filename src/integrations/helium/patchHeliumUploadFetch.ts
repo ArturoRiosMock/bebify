@@ -28,8 +28,19 @@ async function readUploadJson(response: Response): Promise<UploadJson | null> {
   }
 }
 
-function uploadSucceeded(response: Response, json: UploadJson | null): boolean {
-  return response.ok && Boolean(json?.url);
+function responseMatchesColumnType(json: UploadJson | null, columnType: string): boolean {
+  if (!json?.url) return false;
+  const key = String(json.key ?? '');
+  if (columnType === 'file_reference') return key.startsWith('gid://');
+  return !key.startsWith('gid://');
+}
+
+function uploadSucceeded(response: Response, json: UploadJson | null, columnType: string): boolean {
+  return response.ok && responseMatchesColumnType(json, columnType);
+}
+
+function orderedColumnTypes(): string[] {
+  return ['file', 'file_reference'];
 }
 
 async function tryUpload(
@@ -67,21 +78,16 @@ export function patchHeliumUploadFetch(shopDomain: string): void {
     const initialFormData = cloneFormData(init.body);
     initialFormData.set('customer[domain]', normalizedDomain);
 
-    const columnTypes = new Set<string>();
-    const initialType = String(initialFormData.get('customer[columnType]') ?? 'file');
-    columnTypes.add(initialType);
-    columnTypes.add(initialType === 'file' ? 'file_reference' : 'file');
-
     let lastResponse: Response | null = null;
 
-    for (const columnType of columnTypes) {
+    for (const columnType of orderedColumnTypes()) {
       const formData = cloneFormData(initialFormData);
       formData.set('customer[columnType]', columnType);
       const response = await tryUpload(originalFetch, input, init, formData);
       const json = await readUploadJson(response);
       lastResponse = response;
 
-      if (uploadSucceeded(response, json)) {
+      if (uploadSucceeded(response, json, columnType)) {
         return response;
       }
     }

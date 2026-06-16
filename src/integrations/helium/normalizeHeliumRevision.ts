@@ -1,7 +1,12 @@
 type HeliumField = {
   type?: string;
   settings?: {
+    storageLocation?: string;
     description?: string;
+    [key: string]: unknown;
+  };
+  dataColumn?: {
+    dataType?: string;
     [key: string]: unknown;
   };
   validations?: Array<{
@@ -17,18 +22,34 @@ type HeliumRevision = {
 };
 
 const FILE_ERROR_MESSAGES: Record<string, string> = {
-  less_than: 'El archivo debe ser menor a 20 MB.',
+  less_than: 'El archivo debe ser menor a 25 MB.',
   file_extension_not_blank: 'El archivo debe ser un PDF válido.',
   file_extension_equals: 'Solo se permiten archivos PDF.',
-  not_blank: 'Debes subir tu constancia de razón social.',
+  file_extension_not_equals: 'Sube un archivo PDF, no un ejecutable.',
+  not_blank: 'Debes subir tu Constancia de Situación Fiscal (PDF).',
 };
+
+const FILE_FIELD_DESCRIPTION =
+  'Sube tu Constancia de Situación Fiscal en formato PDF (máximo 25 MB).';
+
+function resolveFileColumnType(field: HeliumField): 'file' | 'file_reference' {
+  const storage = field.settings?.storageLocation;
+  if (storage === 'file_reference') return 'file_reference';
+  if (storage === 'file') return 'file';
+  return field.dataColumn?.dataType === 'file_reference' ? 'file_reference' : 'file';
+}
 
 function normalizeFileField(field: HeliumField) {
   field.settings = field.settings ? { ...field.settings } : {};
+  field.dataColumn = field.dataColumn ? { ...field.dataColumn } : {};
   field.validations = field.validations?.map((validation) => ({ ...validation })) ?? [];
 
+  const columnType = resolveFileColumnType(field);
+  field.dataColumn.dataType = columnType;
+  field.settings.storageLocation = columnType === 'file_reference' ? 'file_reference' : 'file';
+
   if (!field.settings.description?.trim()) {
-    field.settings.description = 'Sube tu constancia en formato PDF (máximo 20 MB).';
+    field.settings.description = FILE_FIELD_DESCRIPTION;
   }
 
   for (const validation of field.validations) {
@@ -38,8 +59,8 @@ function normalizeFileField(field: HeliumField) {
 }
 
 /**
- * Solo traduce mensajes y descripción. No altera dataType ni reglas de validación
- * para que el comportamiento coincida con el preview de Helium Admin.
+ * Traduce mensajes al español y alinea dataType con storageLocation cuando Helium
+ * publica una mezcla file / file_reference incompatible en el embed.
  */
 export function normalizeHeliumRevision(revision: HeliumRevision): HeliumRevision {
   if (!Array.isArray(revision.fields)) return revision;
@@ -49,6 +70,7 @@ export function normalizeHeliumRevision(revision: HeliumRevision): HeliumRevisio
     const copy: HeliumField = {
       ...field,
       settings: field.settings ? { ...field.settings } : undefined,
+      dataColumn: field.dataColumn ? { ...field.dataColumn } : undefined,
       validations: field.validations?.map((validation) => ({ ...validation })),
     };
     normalizeFileField(copy);

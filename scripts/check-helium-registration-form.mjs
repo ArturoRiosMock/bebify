@@ -4,7 +4,7 @@
  *
  * Si falla, restaurar en Shopify Admin:
  * Apps → Customer Fields → Formulario "Registro" (kntKby)
- * → paso "Datos de Facturación" → campo File "Constancia de razón social" (PDF, obligatorio) → Publicar
+ * → paso "Datos de Facturación" → campo File "Constancia de Situación Fiscal (PDF)" → Publicar
  */
 
 const SHOP_DOMAIN = process.env.VITE_SHOPIFY_STORE_DOMAIN?.trim() || 'mr-brown-mayoreo.myshopify.com';

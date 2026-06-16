@@ -61,7 +61,7 @@ async function main() {
   }
 
   await page.getByRole('button', { name: 'Siguiente' }).click();
-  await page.getByText('constancia de razón social', { exact: false }).waitFor({ timeout: 15000 });
+  await page.getByText('Constancia de Situación Fiscal', { exact: false }).waitFor({ timeout: 15000 });
 
   const cfdi = page.getByLabel('Uso de CFDI');
   if (await cfdi.isVisible().catch(() => false)) {
