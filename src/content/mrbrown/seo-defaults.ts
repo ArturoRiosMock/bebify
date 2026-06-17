@@ -23,11 +23,11 @@ export const TITLE_SUFFIX = ` | ${SITE_NAME}`;
  * página de política, FAQ, etc.). Para una OG dedicada, sustituir el archivo
  * en `/public/og-default.jpg` (1200×630) y actualizar esta constante.
  */
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/hero-eventos-sociales.jpg`;
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-share.jpg`;
 export const DEFAULT_OG_IMAGE_ALT =
-  'Mr. Brown — bebidas premium y barras para eventos en CDMX';
-export const DEFAULT_OG_IMAGE_WIDTH = '1200';
-export const DEFAULT_OG_IMAGE_HEIGHT = '630';
+  'Conoce Mr. Brown — barra libre, mixología y tienda en Valle de Bravo';
+export const DEFAULT_OG_IMAGE_WIDTH = '1024';
+export const DEFAULT_OG_IMAGE_HEIGHT = '454';
 
 /** URL absoluta a partir de un path interno. */
 export const absoluteUrl = (path: string): string => {
