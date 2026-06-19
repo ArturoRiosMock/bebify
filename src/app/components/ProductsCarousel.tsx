@@ -80,19 +80,45 @@ export const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
       </div>
 
       <style>{`
+        @media (min-width: 641px) {
+          .products-carousel {
+            position: relative;
+            padding: 0 48px;
+          }
+        }
         .products-carousel .slick-list { margin: 0 -8px; }
         .products-carousel .slick-dots { bottom: -32px; }
         .products-carousel .slick-dots li button:before { color: #0055a2; font-size: 8px; opacity: 0.4; }
         .products-carousel .slick-dots li.slick-active button:before { color: #0055a2; opacity: 1; }
-        .products-carousel .slick-prev,
-        .products-carousel .slick-next { width: 40px; height: 40px; z-index: 10; }
-        .products-carousel .slick-prev { left: -45px; }
-        .products-carousel .slick-next { right: -45px; }
-        .products-carousel .slick-prev:before,
-        .products-carousel .slick-next:before { color: #0055a2; font-size: 40px; opacity: 1; }
-        @media (max-width: 1024px) {
-          .products-carousel .slick-prev { left: -20px; }
-          .products-carousel .slick-next { right: -20px; }
+        @media (min-width: 641px) {
+          .products-carousel .slick-prev,
+          .products-carousel .slick-next {
+            width: 36px;
+            height: 36px;
+            z-index: 10;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+          }
+          .products-carousel .slick-prev { left: 0; }
+          .products-carousel .slick-next { right: 0; }
+          .products-carousel .slick-prev:before,
+          .products-carousel .slick-next:before {
+            color: #0055a2;
+            font-size: 20px;
+            line-height: 1;
+            opacity: 1;
+          }
+          .products-carousel .slick-prev:hover,
+          .products-carousel .slick-next:hover { background: #f0f7ff; }
+          .products-carousel .slick-prev.slick-disabled,
+          .products-carousel .slick-next.slick-disabled {
+            opacity: 0.35;
+            cursor: default;
+          }
         }
         .corner-badge {
           position: absolute;
