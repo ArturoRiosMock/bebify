@@ -32,10 +32,9 @@ function resolveSlideImages(slide: HeroSlide, index: number) {
   const desktop =
     slide.imageDesktop ||
     (index === 0 ? heroSlide1 : GIFFARD_DESKTOP);
-  const mobile =
-    slide.imageMobile ||
-    slide.imageDesktop ||
-    (index === 0 ? heroSlide1 : GIFFARD_MOBILE);
+  const mobile = slide.imageMobile
+    || (slide.imageOnly ? null : slide.imageDesktop)
+    || (index === 0 ? heroSlide1 : GIFFARD_MOBILE);
 
   return { desktop, mobile };
 }
@@ -55,18 +54,14 @@ function HeroSlideContent({
   return (
     <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px]">
       {slide.imageOnly ? (
-        <>
-          <img
-            src={desktop}
-            alt={slide.title || 'Banner promocional'}
-            className="hidden md:block w-full h-full object-contain bg-[#d1e9f6]"
-          />
+        <picture>
+          <source media="(min-width: 768px)" srcSet={desktop} />
           <img
             src={mobile}
             alt={slide.title || 'Banner promocional'}
-            className="md:hidden w-full h-full object-contain bg-[#d1e9f6]"
+            className="w-full h-full object-contain bg-[#d1e9f6]"
           />
-        </>
+        </picture>
       ) : (
         <picture>
           <source media="(min-width: 768px)" srcSet={desktop} />
@@ -142,8 +137,8 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
         buttonText: 'EXPLORAR CATÁLOGO',
       },
       {
-        imageMobile: '',
-        imageDesktop: '',
+        imageMobile: '/banners/hero-giffard-mobile.jpeg',
+        imageDesktop: '/banners/hero-giffard-desktop.jpeg',
         title: 'Giffard Próximamente',
         subtitle: '',
         badge: '',

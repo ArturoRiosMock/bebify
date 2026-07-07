@@ -10,8 +10,8 @@
         "buttonText": "EXPLORAR CATÁLOGO"
       },
       {
-        "imageMobile": "",
-        "imageDesktop": "",
+        "imageMobile": "/banners/hero-giffard-mobile.jpeg",
+        "imageDesktop": "/banners/hero-giffard-desktop.jpeg",
         "title": "Giffard Próximamente",
         "subtitle": "",
         "badge": "",

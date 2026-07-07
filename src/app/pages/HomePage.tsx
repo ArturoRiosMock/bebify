@@ -7,6 +7,7 @@ import { About } from '@/app/components/About';
 import { ProductsCarousel } from '@/app/components/ProductsCarousel';
 import { RegisterBanner } from '@/app/components/RegisterBanner';
 import { useShopifyProducts, useShopifyLatestProducts } from '@/shopify/hooks/useShopifyProducts';
+import { isProductInStock } from '@/app/utils/productStock';
 import { HomeContentContext } from '@/app/context/HomeContentContext';
 import { useHomeContent } from '@/app/hooks/useHomeContent';
 
@@ -29,10 +30,11 @@ export const HomePage: React.FC = () => {
   );
 
   const newArrivals = useMemo(() => {
-    if (latestProducts.length > 0) {
-      return latestProducts.slice(0, PRODUCTS_PER_CAROUSEL);
-    }
-    return products.slice(-PRODUCTS_PER_CAROUSEL).reverse();
+    const source =
+      latestProducts.length > 0
+        ? latestProducts
+        : products.slice(-PRODUCTS_PER_CAROUSEL).reverse();
+    return source.filter(isProductInStock).slice(0, PRODUCTS_PER_CAROUSEL);
   }, [latestProducts, products]);
 
   const newArrivalsHref = '/productos';
