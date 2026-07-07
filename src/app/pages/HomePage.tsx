@@ -7,6 +7,8 @@ import { About } from '@/app/components/About';
 import { ProductsCarousel } from '@/app/components/ProductsCarousel';
 import { RegisterBanner } from '@/app/components/RegisterBanner';
 import { useShopifyProducts, useShopifyLatestProducts } from '@/shopify/hooks/useShopifyProducts';
+import { HomeContentContext } from '@/app/context/HomeContentContext';
+import { useHomeContent } from '@/app/hooks/useHomeContent';
 
 const PRODUCTS_PER_CAROUSEL = 20;
 
@@ -15,6 +17,7 @@ export const HomePage: React.FC = () => {
   const productsRef = useRef<HTMLDivElement>(null);
   const { products, loading, error } = useShopifyProducts();
   const { products: latestProducts } = useShopifyLatestProducts(PRODUCTS_PER_CAROUSEL);
+  const { content } = useHomeContent();
 
   const scrollToProducts = () => {
     productsRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -22,12 +25,9 @@ export const HomePage: React.FC = () => {
 
   const featuredProducts = useMemo(
     () => products.slice(0, PRODUCTS_PER_CAROUSEL),
-    [products]
+    [products],
   );
 
-  // "Últimas novedades" usa los productos ordenados por fecha de creación
-  // (sortKey: CREATED_AT, reverse: true) directo desde Shopify Storefront API.
-  // Como fallback usa los últimos del catálogo general si la query falla.
   const newArrivals = useMemo(() => {
     if (latestProducts.length > 0) {
       return latestProducts.slice(0, PRODUCTS_PER_CAROUSEL);
@@ -42,7 +42,7 @@ export const HomePage: React.FC = () => {
   };
 
   return (
-    <>
+    <HomeContentContext.Provider value={content}>
       <Hero onShopNowClick={scrollToProducts} />
 
       <FlashDeals />
@@ -68,21 +68,20 @@ export const HomePage: React.FC = () => {
         {!loading && (
           <>
             <ProductsCarousel
-              title="Productos Destacados"
+              title={content.carousels.featuredTitle}
               products={featuredProducts}
               onProductClick={(p) => handleProductClick(p.handle || p.id)}
             />
 
             {newArrivals.length > 0 && (
               <ProductsCarousel
-                title="Últimas novedades"
+                title={content.carousels.newArrivalsTitle}
                 products={newArrivals}
                 onProductClick={(p) => handleProductClick(p.handle || p.id)}
                 cornerBadge="Nuevo"
                 viewAllHref={newArrivalsHref}
               />
             )}
-
           </>
         )}
       </div>
@@ -93,48 +92,46 @@ export const HomePage: React.FC = () => {
         <RegisterBanner />
       </div>
 
-      {/* NewsletterPopup desactivado temporalmente */}
-      {/* <NewsletterPopup /> */}
       <About />
 
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#0055a2]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-[#0055a2] text-2xl">🚚</span>
-              </div>
-              <h3 className="text-[#212121] mb-2">Entregas Exprés</h3>
-              <p className="text-[#717182]">Entregas a partir de 24 a 48 horas en toda la CDMX y área Metropolitana</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#0055a2]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-[#0055a2] text-2xl">📦</span>
-              </div>
-              <h3 className="text-[#212121] mb-2">Amplio Catálogo</h3>
-              <p className="text-[#717182]">+2,000 productos de +200 proveedores</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#0055a2]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-[#0055a2] text-2xl">💬</span>
-              </div>
-              <h3 className="text-[#212121] mb-2">Servicio al Cliente</h3>
-              <p className="text-[#717182]">¿Alguna pregunta? Contáctanos</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/blog')}
-              className="text-center group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0055a2] focus-visible:ring-offset-2 rounded-lg"
-            >
-              <div className="w-16 h-16 bg-[#0055a2]/10 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors group-hover:bg-[#0055a2]/20">
-                <span className="text-[#0055a2] text-2xl">📰</span>
-              </div>
-              <h3 className="text-[#212121] mb-2 group-hover:text-[#0055a2] transition-colors">Blog</h3>
-              <p className="text-[#717182]">Tendencias, guías y novedades del mundo de las bebidas</p>
-            </button>
+            {content.benefits.map((benefit, index) => {
+              const isBlog = index === 3;
+
+              if (isBlog) {
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => navigate('/blog')}
+                    className="text-center group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0055a2] focus-visible:ring-offset-2 rounded-lg"
+                  >
+                    <div className="w-16 h-16 bg-[#0055a2]/10 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors group-hover:bg-[#0055a2]/20">
+                      <span className="text-[#0055a2] text-2xl">{benefit.icon}</span>
+                    </div>
+                    <h3 className="text-[#212121] mb-2 group-hover:text-[#0055a2] transition-colors">
+                      {benefit.title}
+                    </h3>
+                    <p className="text-[#717182]">{benefit.description}</p>
+                  </button>
+                );
+              }
+
+              return (
+                <div key={index} className="text-center">
+                  <div className="w-16 h-16 bg-[#0055a2]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-[#0055a2] text-2xl">{benefit.icon}</span>
+                  </div>
+                  <h3 className="text-[#212121] mb-2">{benefit.title}</h3>
+                  <p className="text-[#717182]">{benefit.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
-    </>
+    </HomeContentContext.Provider>
   );
 };

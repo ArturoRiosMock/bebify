@@ -16,6 +16,7 @@ import { FAQPage } from '@/app/pages/FAQPage';
 import { PrivacyPolicyPage } from '@/app/pages/PrivacyPolicyPage';
 import { CookiePolicyPage } from '@/app/pages/CookiePolicyPage';
 import { AdminBannersPage } from '@/app/pages/AdminBannersPage';
+import { EdicionHomePage } from '@/app/pages/EdicionHomePage';
 import { SearchResultsPage } from '@/app/pages/SearchResultsPage';
 import { AccountPage } from '@/app/pages/AccountPage';
 import { OrderDetailPage } from '@/app/pages/OrderDetailPage';
@@ -49,6 +50,7 @@ function App() {
               <Route path="/preguntas-frecuentes" element={<FAQPage />} />
             </Route>
             <Route path="/admin/banners" element={<AdminBannersPage />} />
+            <Route path="/edicion" element={<EdicionHomePage />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

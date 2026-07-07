@@ -1,0 +1,73 @@
+{
+  "hero": {
+    "slides": [
+      {
+        "imageMobile": "",
+        "imageDesktop": "",
+        "title": "La Plataforma de Bebidas B2B",
+        "subtitle": "Centraliza tus compras de bebidas con acceso a más de 2,000 productos de más de 200 proveedores",
+        "badge": "B2B",
+        "buttonText": "EXPLORAR CATÁLOGO"
+      },
+      {
+        "imageMobile": "",
+        "imageDesktop": "",
+        "title": "Giffard Próximamente",
+        "subtitle": "",
+        "badge": "",
+        "buttonText": "",
+        "imageOnly": true
+      }
+    ]
+  },
+  "registerBanner": {
+    "imageMobile": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=520&fit=crop",
+    "imageDesktop": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=520&fit=crop",
+    "title": "Regístrate y accede a precios exclusivos B2B",
+    "description": "Crea tu cuenta en Bebify para ver precios, armar pedidos y comprar desde un solo lugar con más de 2,000 productos de más de 200 proveedores.",
+    "buttonText": "Crear cuenta"
+  },
+  "about": {
+    "image": "",
+    "imageAlt": "Estantería de licores premium en bar profesional",
+    "badge": "Quiénes Somos",
+    "title": "Revolucionamos el suministro de bebidas",
+    "paragraph1": "En Bebify, centralizamos tus pedidos con más de 200 proveedores, ahorrándote tiempo y reduciendo costos en la gestión de suministros para tu centro de consumo.",
+    "paragraph2": "Con más de 2,000 bebidas disponibles, ofrecemos la diversidad que necesitas para satisfacer todas las preferencias de tus clientes. Nuestra plataforma tecnológica garantiza pedidos sin errores y entregas confiables.",
+    "statValue": "+250",
+    "statLabel": "Clientes Satisfechos",
+    "features": [
+      { "title": "Coordinación Simple", "description": "+200 proveedores centralizados" },
+      { "title": "Amplio Catálogo", "description": "+2,000 productos disponibles" },
+      { "title": "Entregas 24h", "description": "En toda la CDMX" },
+      { "title": "+250 Clientes", "description": "Confían en Bebify" }
+    ],
+    "quote": "Optimiza tu operación, ahorra tiempo y dinero. Revolucionamos el suministro de bebidas para centros de consumo."
+  },
+  "benefits": [
+    {
+      "icon": "🚚",
+      "title": "Entregas Exprés",
+      "description": "Entregas a partir de 24 a 48 horas en toda la CDMX y área Metropolitana"
+    },
+    {
+      "icon": "📦",
+      "title": "Amplio Catálogo",
+      "description": "+2,000 productos de +200 proveedores"
+    },
+    {
+      "icon": "💬",
+      "title": "Servicio al Cliente",
+      "description": "¿Alguna pregunta? Contáctanos"
+    },
+    {
+      "icon": "📰",
+      "title": "Blog",
+      "description": "Tendencias, guías y novedades del mundo de las bebidas"
+    }
+  ],
+  "carousels": {
+    "featuredTitle": "Productos Destacados",
+    "newArrivalsTitle": "Últimas novedades"
+  }
+}
