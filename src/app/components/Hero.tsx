@@ -148,9 +148,19 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
     ] satisfies HeroSlide[];
   }, [content.hero.slides]);
 
+  const sliderSettings = useMemo(
+    () => ({
+      ...SLIDER_SETTINGS,
+      infinite: slides.length > 1,
+      autoplay: slides.length > 1,
+      dots: slides.length > 1,
+    }),
+    [slides.length],
+  );
+
   return (
     <section className="relative bg-gray-100 overflow-hidden hero-slider">
-      <Slider {...SLIDER_SETTINGS}>
+      <Slider key={slides.length} {...sliderSettings}>
         {slides.map((slide, index) => (
           <div key={index}>
             <HeroSlideContent slide={slide} index={index} onShopNowClick={onShopNowClick} />

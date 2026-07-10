@@ -42,6 +42,11 @@ export default async function homeContentHandler(req, res) {
         return;
       }
 
+      if (body.authOnly === true) {
+        res.status(200).json({ ok: true });
+        return;
+      }
+
       if (!body.content || typeof body.content !== 'object') {
         res.status(400).json({ error: 'Falta el campo content' });
         return;

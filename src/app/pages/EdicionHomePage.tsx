@@ -1,19 +1,42 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Lock, LogOut, Save, ExternalLink, Image, Type, Loader2 } from 'lucide-react';
-import type { HomeContent } from '@/types/homeContent';
-import homeContentDefault from '@/data/home-content.json';
-import { persistHomeContent, useHomeContent } from '@/app/hooks/useHomeContent';
 import {
-  checkEdicionCredentials,
+  Lock,
+  LogOut,
+  Save,
+  ExternalLink,
+  Image,
+  Type,
+  Loader2,
+  Upload,
+  Trash2,
+  Link2,
+  Plus,
+} from 'lucide-react';
+import type { HeroSlide, HomeContent } from '@/types/homeContent';
+import homeContentDefault from '@/data/home-content.json';
+import { persistHomeContent, uploadHomeImage, useHomeContent } from '@/app/hooks/useHomeContent';
+import {
+  getEdicionCredentials,
   isEdicionAuthenticated,
-  setEdicionAuthenticated,
-  EDICION_PASS,
-  EDICION_USER,
+  setEdicionSession,
+  verifyEdicionCredentials,
 } from '@/app/utils/edicionAuth';
 import { PLACEHOLDER_IMAGES } from '@/assets/placeholders';
 
 const SECTIONS = ['Hero', 'Banner registro', 'Quiénes somos', 'Beneficios', 'Carruseles'] as const;
+
+const EMPTY_HERO_SLIDE: HeroSlide = {
+  imageMobile: '',
+  imageDesktop: '',
+  title: '',
+  subtitle: '',
+  badge: '',
+  buttonText: '',
+  imageOnly: true,
+};
+
+const MAX_HERO_SLIDES = 8;
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="block text-xs font-medium text-gray-600 mb-1">{children}</label>;
@@ -56,6 +79,162 @@ function TextInput({
   );
 }
 
+function ImageField({
+  label,
+  value,
+  onChange,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  hint?: string;
+}) {
+  const inputId = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const localPreviewRef = useRef<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [showUrl, setShowUrl] = useState(Boolean(value && value.startsWith('http')));
+  const [dragOver, setDragOver] = useState(false);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+
+  const clearLocalPreview = () => {
+    if (localPreviewRef.current) {
+      URL.revokeObjectURL(localPreviewRef.current);
+      localPreviewRef.current = null;
+    }
+    setLocalPreview(null);
+  };
+
+  useEffect(() => () => clearLocalPreview(), []);
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Elige un archivo de imagen (JPG, PNG, WebP o GIF)');
+      return;
+    }
+    setUploading(true);
+    setError('');
+    clearLocalPreview();
+    const blobUrl = URL.createObjectURL(file);
+    localPreviewRef.current = blobUrl;
+    setLocalPreview(blobUrl);
+    try {
+      const creds = getEdicionCredentials();
+      if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+      const url = await uploadHomeImage(creds.username, creds.password, file);
+      onChange(url);
+      setShowUrl(false);
+    } catch (err) {
+      clearLocalPreview();
+      setError(err instanceof Error ? err.message : 'Error al subir');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const displaySrc = localPreview || value;
+
+  return (
+    <div className="space-y-2">
+      <FieldLabel>{label}</FieldLabel>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          void handleFile(e.dataTransfer.files?.[0]);
+        }}
+        className={`rounded-xl border-2 border-dashed p-3 transition-colors ${
+          dragOver ? 'border-[#0055a2] bg-blue-50' : 'border-gray-200 bg-gray-50'
+        }`}
+      >
+        {displaySrc ? (
+          <div className="space-y-3">
+            <img
+              key={displaySrc}
+              src={displaySrc}
+              alt=""
+              className="h-36 w-full object-cover rounded-lg border bg-white"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0055a2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004488] disabled:opacity-60"
+              >
+                {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                Cambiar imagen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  clearLocalPreview();
+                  onChange('');
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Quitar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => fileRef.current?.click()}
+            className="flex w-full flex-col items-center justify-center gap-2 rounded-lg py-8 text-center hover:bg-white/70 disabled:opacity-60"
+          >
+            {uploading ? (
+              <Loader2 className="w-8 h-8 text-[#0055a2] animate-spin" />
+            ) : (
+              <Upload className="w-8 h-8 text-[#0055a2]" />
+            )}
+            <span className="text-sm font-semibold text-gray-800">
+              {uploading ? 'Subiendo…' : 'Arrastra una imagen o haz clic para subir'}
+            </span>
+            <span className="text-xs text-gray-500">JPG, PNG, WebP o GIF · máx. 5 MB</span>
+          </button>
+        )}
+        <input
+          id={inputId}
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="sr-only"
+          onChange={(e) => void handleFile(e.target.files?.[0])}
+        />
+      </div>
+      {hint && <p className="text-xs text-gray-500">{hint}</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <button
+        type="button"
+        onClick={() => setShowUrl((v) => !v)}
+        className="inline-flex items-center gap-1 text-xs text-[#0055a2] hover:underline"
+      >
+        <Link2 className="w-3.5 h-3.5" />
+        {showUrl ? 'Ocultar URL' : 'Usar URL en su lugar'}
+      </button>
+      {showUrl && (
+        <TextInput
+          value={value}
+          onChange={onChange}
+          placeholder="https://… o /banners/…"
+        />
+      )}
+    </div>
+  );
+}
+
 function ImageFields({
   mobile,
   desktop,
@@ -69,20 +248,18 @@ function ImageFields({
 }) {
   return (
     <div className="grid sm:grid-cols-2 gap-4">
-      <div>
-        <FieldLabel>Imagen móvil (URL)</FieldLabel>
-        <TextInput value={mobile} onChange={onMobile} placeholder="https://..." />
-        {mobile && (
-          <img src={mobile} alt="" className="mt-2 h-24 w-full object-cover rounded-lg border" />
-        )}
-      </div>
-      <div>
-        <FieldLabel>Imagen desktop (URL)</FieldLabel>
-        <TextInput value={desktop} onChange={onDesktop} placeholder="https://..." />
-        {desktop && (
-          <img src={desktop} alt="" className="mt-2 h-24 w-full object-cover rounded-lg border" />
-        )}
-      </div>
+      <ImageField
+        label="Imagen móvil"
+        value={mobile}
+        onChange={onMobile}
+        hint="Recomendado: vertical o cuadrada, ~800px de ancho"
+      />
+      <ImageField
+        label="Imagen desktop"
+        value={desktop}
+        onChange={onDesktop}
+        hint="Recomendado: horizontal, ~1600px de ancho"
+      />
     </div>
   );
 }
@@ -104,19 +281,24 @@ export const EdicionHomePage: React.FC = () => {
     }
   }, [authenticated, loading, remoteContent]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (checkEdicionCredentials(username, password)) {
-      setEdicionAuthenticated(true);
+    setLoginError('');
+    try {
+      const ok = await verifyEdicionCredentials(username, password);
+      if (!ok) {
+        setLoginError('Usuario o contraseña incorrectos');
+        return;
+      }
+      setEdicionSession({ username, password });
       setAuthenticated(true);
-      setLoginError('');
-    } else {
-      setLoginError('Usuario o contraseña incorrectos');
+    } catch {
+      setLoginError('No se pudo verificar el acceso. Intenta de nuevo.');
     }
   };
 
   const handleLogout = () => {
-    setEdicionAuthenticated(false);
+    setEdicionSession(null);
     setAuthenticated(false);
     setUsername('');
     setPassword('');
@@ -126,7 +308,9 @@ export const EdicionHomePage: React.FC = () => {
     setSaving(true);
     setSaveMessage('');
     try {
-      const saved = await persistHomeContent(EDICION_USER, EDICION_PASS, content);
+      const creds = getEdicionCredentials();
+      if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+      const saved = await persistHomeContent(creds.username, creds.password, content);
       setContent(saved);
       setSaveMessage('Cambios guardados correctamente');
     } catch (err) {
@@ -242,13 +426,49 @@ export const EdicionHomePage: React.FC = () => {
 
           {activeSection === 'Hero' && (
             <>
-              <div className="flex items-center gap-2 text-[#0055a2] font-bold">
-                <Image className="w-5 h-5" />
-                Hero principal (slider)
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-[#0055a2] font-bold">
+                  <Image className="w-5 h-5" />
+                  Hero principal (slider)
+                </div>
+                <button
+                  type="button"
+                  disabled={content.hero.slides.length >= MAX_HERO_SLIDES}
+                  onClick={() =>
+                    setContent((c) => ({
+                      ...c,
+                      hero: { slides: [...c.hero.slides, { ...EMPTY_HERO_SLIDE }] },
+                    }))
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#0055a2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004488] disabled:opacity-50"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Agregar banner
+                </button>
               </div>
+              <p className="text-sm text-gray-600">
+                Sube las imágenes desde tu computadora. Luego pulsa Guardar para publicar los cambios.
+                Puedes tener hasta {MAX_HERO_SLIDES} banners.
+              </p>
               {content.hero.slides.map((slide, index) => (
                 <div key={index} className="border rounded-lg p-4 space-y-4">
-                  <p className="text-sm font-bold text-gray-700">Banner {index + 1}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-gray-700">Banner {index + 1}</p>
+                    <button
+                      type="button"
+                      disabled={content.hero.slides.length <= 1}
+                      onClick={() =>
+                        setContent((c) => ({
+                          ...c,
+                          hero: { slides: c.hero.slides.filter((_, i) => i !== index) },
+                        }))
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Eliminar
+                    </button>
+                  </div>
                   <ImageFields
                     mobile={slide.imageMobile}
                     desktop={slide.imageDesktop}
@@ -385,21 +605,11 @@ export const EdicionHomePage: React.FC = () => {
                 <Type className="w-5 h-5" />
                 Sección Quiénes somos
               </div>
-              <div>
-                <FieldLabel>Imagen (URL)</FieldLabel>
-                <TextInput
-                  value={content.about.image}
-                  onChange={(v) => setContent((c) => ({ ...c, about: { ...c.about, image: v } }))}
-                  placeholder="https://..."
-                />
-                {content.about.image && (
-                  <img
-                    src={content.about.image}
-                    alt=""
-                    className="mt-2 h-32 w-full max-w-md object-cover rounded-lg border"
-                  />
-                )}
-              </div>
+              <ImageField
+                label="Imagen"
+                value={content.about.image}
+                onChange={(v) => setContent((c) => ({ ...c, about: { ...c.about, image: v } }))}
+              />
               <div>
                 <FieldLabel>Texto alternativo de imagen</FieldLabel>
                 <TextInput

@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnv } from 'vite';
+import {
+  parseBase64Payload,
+  saveImageToPublicUploads,
+} from '../api/_lib/uploadHomeImage.mjs';
 
-const dataPath = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../api/_data/home-content.json',
-);
-
-const ADMIN_USER = process.env.EDICION_ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.EDICION_ADMIN_PASSWORD || 'admin';
+const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const dataPath = path.join(rootDir, 'api/_data/home-content.json');
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -19,8 +19,18 @@ function readBody(req) {
   });
 }
 
-function isAuthorized(body) {
-  return body.username === ADMIN_USER && body.password === ADMIN_PASS;
+function getAdminCredentials(mode = 'development') {
+  const env = loadEnv(mode, rootDir, '');
+  return {
+    user: env.EDICION_ADMIN_USER || process.env.EDICION_ADMIN_USER || 'admin',
+    pass: env.EDICION_ADMIN_PASSWORD || process.env.EDICION_ADMIN_PASSWORD || '',
+  };
+}
+
+function isAuthorized(body, mode) {
+  const { user, pass } = getAdminCredentials(mode);
+  if (!pass) return false;
+  return body.username === user && body.password === pass;
 }
 
 function deepMerge(base, override) {
@@ -39,58 +49,80 @@ function deepMerge(base, override) {
   return result;
 }
 
+function sendJson(res, status, payload) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(payload));
+}
+
 export function homeContentDevApi() {
   return {
     name: 'home-content-dev-api',
     apply: 'serve',
     configureServer(server) {
+      const mode = server.config.mode || 'development';
+
       server.middlewares.use(async (req, res, next) => {
         const url = req.url?.split('?')[0];
-        if (url !== '/api/home-content') {
-          next();
-          return;
-        }
 
         try {
-          if (req.method === 'GET') {
-            const data = fs.readFileSync(dataPath, 'utf8');
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(data);
+          if (url === '/api/home-content') {
+            if (req.method === 'GET') {
+              const data = fs.readFileSync(dataPath, 'utf8');
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(data);
+              return;
+            }
+
+            if (req.method === 'POST') {
+              const raw = await readBody(req);
+              const body = JSON.parse(raw || '{}');
+              if (!isAuthorized(body, mode)) {
+                sendJson(res, 401, { error: 'No autorizado' });
+                return;
+              }
+              if (body.authOnly === true) {
+                sendJson(res, 200, { ok: true });
+                return;
+              }
+              if (!body.content || typeof body.content !== 'object') {
+                sendJson(res, 400, { error: 'Falta el campo content' });
+                return;
+              }
+              const defaults = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+              const merged = deepMerge(defaults, body.content);
+              fs.writeFileSync(dataPath, JSON.stringify(merged, null, 2));
+              sendJson(res, 200, { ok: true, content: merged });
+              return;
+            }
+
+            sendJson(res, 405, { error: 'Method not allowed' });
             return;
           }
 
-          if (req.method === 'POST') {
+          if (url === '/api/upload-home-image') {
+            if (req.method !== 'POST') {
+              sendJson(res, 405, { error: 'Method not allowed' });
+              return;
+            }
+
             const raw = await readBody(req);
             const body = JSON.parse(raw || '{}');
-            if (!isAuthorized(body)) {
-              res.statusCode = 401;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: 'No autorizado' }));
+            if (!isAuthorized(body, mode)) {
+              sendJson(res, 401, { error: 'No autorizado' });
               return;
             }
-            if (!body.content || typeof body.content !== 'object') {
-              res.statusCode = 400;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: 'Falta el campo content' }));
-              return;
-            }
-            const defaults = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-            const merged = deepMerge(defaults, body.content);
-            fs.writeFileSync(dataPath, JSON.stringify(merged, null, 2));
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ ok: true, content: merged }));
+
+            const validated = parseBase64Payload(body);
+            const imageUrl = saveImageToPublicUploads(rootDir, validated);
+            sendJson(res, 200, { ok: true, url: imageUrl });
             return;
           }
 
-          res.statusCode = 405;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          next();
         } catch (err) {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: err.message || 'Error interno' }));
+          sendJson(res, 500, { error: err.message || 'Error interno' });
         }
       });
     },

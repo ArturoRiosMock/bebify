@@ -54,8 +54,12 @@ export async function saveHomeContent(content) {
 }
 
 const ADMIN_USER = process.env.EDICION_ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.EDICION_ADMIN_PASSWORD || 'admin';
+const ADMIN_PASS = process.env.EDICION_ADMIN_PASSWORD || '';
 
 export function isAdminCredentials(username, password) {
+  if (!ADMIN_PASS) {
+    console.warn('EDICION_ADMIN_PASSWORD no está configurada');
+    return false;
+  }
   return username === ADMIN_USER && password === ADMIN_PASS;
 }

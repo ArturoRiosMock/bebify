@@ -112,3 +112,45 @@ export async function persistHomeContent(
 
   return mergeContent(data.content);
 }
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('No se pudo leer el archivo'));
+        return;
+      }
+      resolve(result);
+    };
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function uploadHomeImage(
+  username: string,
+  password: string,
+  file: File,
+): Promise<string> {
+  const dataUrl = await fileToBase64(file);
+  const res = await fetch('/api/upload-home-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username,
+      password,
+      filename: file.name,
+      contentType: file.type || 'image/jpeg',
+      data: dataUrl,
+    }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Error al subir imagen');
+  }
+
+  return data.url as string;
+}

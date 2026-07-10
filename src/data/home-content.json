@@ -37,10 +37,22 @@
     "statValue": "+250",
     "statLabel": "Clientes Satisfechos",
     "features": [
-      { "title": "Coordinación Simple", "description": "+200 proveedores centralizados" },
-      { "title": "Amplio Catálogo", "description": "+2,000 productos disponibles" },
-      { "title": "Entregas 24h", "description": "En toda la CDMX" },
-      { "title": "+250 Clientes", "description": "Confían en Bebify" }
+      {
+        "title": "Coordinación Simple",
+        "description": "+200 proveedores centralizados"
+      },
+      {
+        "title": "Amplio Catálogo",
+        "description": "+2,000 productos disponibles"
+      },
+      {
+        "title": "Entregas 24h",
+        "description": "En toda la CDMX"
+      },
+      {
+        "title": "+250 Clientes",
+        "description": "Confían en Bebify"
+      }
     ],
     "quote": "Optimiza tu operación, ahorra tiempo y dinero. Revolucionamos el suministro de bebidas para centros de consumo."
   },
