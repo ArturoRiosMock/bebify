@@ -1,5 +1,5 @@
 import { isAdminCredentials } from './_lib/homeContent.mjs';
-import { parseBase64Payload, uploadImageToShopify } from './_lib/uploadHomeImage.mjs';
+import { parseBase64Payload, uploadHomeBannerImage } from './_lib/uploadHomeImage.mjs';
 
 function parseBody(req) {
   return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
@@ -35,10 +35,7 @@ export default async function uploadHomeImageHandler(req, res) {
     }
 
     const validated = parseBase64Payload(body);
-    const url = await uploadImageToShopify({
-      ...validated,
-      alt: body.alt || 'Banner Bebify',
-    });
+    const url = await uploadHomeBannerImage(validated, body.alt || 'Banner Bebify');
 
     res.status(200).json({ ok: true, url });
   } catch (err) {

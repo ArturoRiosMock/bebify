@@ -1,5 +1,6 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { put } from '@vercel/blob';
 import { adminGraphql } from './shopify.mjs';
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -37,6 +38,22 @@ export function saveImageToPublicUploads(projectRoot, { finalName, buffer }) {
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, finalName), buffer);
   return `/uploads/home/${finalName}`;
+}
+
+export async function uploadImageToBlob({ finalName, contentType, buffer }) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error('BLOB_READ_WRITE_TOKEN no configurado');
+  }
+
+  const blob = await put(`home-banners/${finalName}`, buffer, {
+    access: 'public',
+    contentType,
+    token,
+    addRandomSuffix: false,
+  });
+
+  return blob.url;
 }
 
 async function stagedUpload(filename, contentType, buffer) {
@@ -158,6 +175,14 @@ export async function uploadImageToShopify({ finalName, contentType, buffer, alt
     return file.image.url;
   }
   return waitForImageUrl(file.id);
+}
+
+/** Prefer Vercel Blob; fall back to Shopify Files if Blob is unavailable. */
+export async function uploadHomeBannerImage(validated, alt) {
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    return uploadImageToBlob(validated);
+  }
+  return uploadImageToShopify({ ...validated, alt });
 }
 
 export function parseBase64Payload(body) {
