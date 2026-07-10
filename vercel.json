@@ -7,6 +7,9 @@
       "source": "/tools/customr/:path*",
       "destination": "https://bebify.store/tools/customr/:path*"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
