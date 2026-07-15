@@ -12,6 +12,7 @@ interface Slide {
   id: number;
   image: string;
   mobileImage?: string;
+  alt?: string;
   bgColor: string;
   title?: string;
   subtitle?: string;
@@ -27,6 +28,21 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
   const navigate = useNavigate();
 
   const slides: Slide[] = [
+    {
+      id: 8,
+      image: '/mr-brown-days-desktop.png',
+      mobileImage: '/mr-brown-days-movil.jpg',
+      alt: 'Mr. Brown Days — 10% off en productos seleccionados',
+      bgColor: '#7EB8D4',
+      onSlideClick: () => navigate('/categorias/mr-brown-days'),
+    },
+    {
+      id: 7,
+      image: '/giffard-desktop.jpeg',
+      mobileImage: '/giffard-movil.jpeg',
+      alt: 'Giffard — Próximamente en Mr. Brown',
+      bgColor: '#C5A028',
+    },
     // Slide Hot Sale oculto temporalmente
     // {
     //   id: 6,
@@ -147,7 +163,7 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
                 )}
                 <img
                   src={slides[currentSlide].image}
-                  alt={slides[currentSlide].title ?? 'Mr. Brown Banner'}
+                  alt={slides[currentSlide].alt ?? slides[currentSlide].title ?? 'Mr. Brown Banner'}
                   className="w-full h-full object-center object-contain"
                 />
               </picture>
