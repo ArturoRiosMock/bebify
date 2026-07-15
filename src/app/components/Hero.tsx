@@ -34,6 +34,8 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
       mobileImage: '/mr-brown-days-movil.jpg',
       alt: 'Mr. Brown Days — 10% off en productos seleccionados',
       bgColor: '#7EB8D4',
+      buttonText: 'VER PROMOCIÓN',
+      buttonAction: () => navigate('/categorias/mr-brown-days'),
       onSlideClick: () => navigate('/categorias/mr-brown-days'),
     },
     {
