@@ -31,3 +31,4 @@ npm-debug.log*
 # Uploads locales del editor /edicion
 public/uploads/home/*
 !public/uploads/home/.gitkeep
+.env*
