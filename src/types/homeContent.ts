@@ -5,6 +5,8 @@ export interface HeroSlide {
   subtitle: string;
   badge: string;
   buttonText: string;
+  /** Destino del CTA. Vacío = scroll a productos (comportamiento legacy). */
+  buttonHref?: string;
   /** Si es true, solo muestra la imagen sin overlay de texto */
   imageOnly?: boolean;
 }

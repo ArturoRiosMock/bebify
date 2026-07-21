@@ -33,6 +33,7 @@ const EMPTY_HERO_SLIDE: HeroSlide = {
   subtitle: '',
   badge: '',
   buttonText: '',
+  buttonHref: '',
   imageOnly: true,
 };
 
@@ -84,20 +85,26 @@ function ImageField({
   value,
   onChange,
   hint,
+  onUploadingChange,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   hint?: string;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const inputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const localPreviewRef = useRef<string | null>(null);
+  const uploadingRef = useRef(false);
+  const onUploadingChangeRef = useRef(onUploadingChange);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [showUrl, setShowUrl] = useState(Boolean(value && value.startsWith('http')));
   const [dragOver, setDragOver] = useState(false);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
+
+  onUploadingChangeRef.current = onUploadingChange;
 
   const clearLocalPreview = () => {
     if (localPreviewRef.current) {
@@ -107,7 +114,19 @@ function ImageField({
     setLocalPreview(null);
   };
 
-  useEffect(() => () => clearLocalPreview(), []);
+  useEffect(
+    () => () => {
+      clearLocalPreview();
+      if (uploadingRef.current) onUploadingChangeRef.current?.(false);
+    },
+    [],
+  );
+
+  const setUploadingState = (next: boolean) => {
+    uploadingRef.current = next;
+    setUploading(next);
+    onUploadingChange?.(next);
+  };
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
@@ -115,7 +134,7 @@ function ImageField({
       setError('Elige un archivo de imagen (JPG, PNG, WebP o GIF)');
       return;
     }
-    setUploading(true);
+    setUploadingState(true);
     setError('');
     clearLocalPreview();
     const blobUrl = URL.createObjectURL(file);
@@ -126,12 +145,13 @@ function ImageField({
       if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
       const url = await uploadHomeImage(creds.username, creds.password, file);
       onChange(url);
+      clearLocalPreview();
       setShowUrl(false);
     } catch (err) {
       clearLocalPreview();
       setError(err instanceof Error ? err.message : 'Error al subir');
     } finally {
-      setUploading(false);
+      setUploadingState(false);
       if (fileRef.current) fileRef.current.value = '';
     }
   };
@@ -240,11 +260,13 @@ function ImageFields({
   desktop,
   onMobile,
   onDesktop,
+  onUploadingChange,
 }: {
   mobile: string;
   desktop: string;
   onMobile: (v: string) => void;
   onDesktop: (v: string) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   return (
     <div className="grid sm:grid-cols-2 gap-4">
@@ -252,12 +274,14 @@ function ImageFields({
         label="Imagen móvil"
         value={mobile}
         onChange={onMobile}
+        onUploadingChange={onUploadingChange}
         hint="Recomendado: vertical o cuadrada, ~800px de ancho"
       />
       <ImageField
         label="Imagen desktop"
         value={desktop}
         onChange={onDesktop}
+        onUploadingChange={onUploadingChange}
         hint="Recomendado: horizontal, ~1600px de ancho"
       />
     </div>
@@ -273,13 +297,47 @@ export const EdicionHomePage: React.FC = () => {
   const [content, setContent] = useState<HomeContent>(homeContentDefault as HomeContent);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [uploadsInFlight, setUploadsInFlight] = useState(0);
+  const hydratedRef = useRef(false);
+  const contentRef = useRef(content);
   const { content: remoteContent, loading } = useHomeContent();
 
+  contentRef.current = content;
+
   useEffect(() => {
-    if (authenticated && !loading) {
+    if (!authenticated) {
+      hydratedRef.current = false;
+      return;
+    }
+    if (!loading && !hydratedRef.current) {
       setContent(remoteContent);
+      hydratedRef.current = true;
     }
   }, [authenticated, loading, remoteContent]);
+
+  const trackUpload = (uploading: boolean) => {
+    setUploadsInFlight((n) => Math.max(0, n + (uploading ? 1 : -1)));
+  };
+
+  const patchHeroSlideImage = (
+    index: number,
+    field: 'imageMobile' | 'imageDesktop',
+    url: string,
+  ) => {
+    setContent((c) => {
+      const slides = [...c.hero.slides];
+      const slide = slides[index];
+      if (!slide) return c;
+      const other = field === 'imageMobile' ? 'imageDesktop' : 'imageMobile';
+      slides[index] = {
+        ...slide,
+        [field]: url,
+        // Si el otro tamaño está vacío, reutilizar la misma URL para que el home la muestre.
+        [other]: slide[other] || url,
+      };
+      return { ...c, hero: { slides } };
+    });
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,12 +363,20 @@ export const EdicionHomePage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (uploadsInFlight > 0) {
+      setSaveMessage('Espera a que termine la subida de la imagen antes de guardar');
+      return;
+    }
     setSaving(true);
     setSaveMessage('');
     try {
       const creds = getEdicionCredentials();
       if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
-      const saved = await persistHomeContent(creds.username, creds.password, content);
+      const saved = await persistHomeContent(
+        creds.username,
+        creds.password,
+        contentRef.current,
+      );
       setContent(saved);
       setSaveMessage('Cambios guardados correctamente');
     } catch (err) {
@@ -376,11 +442,15 @@ export const EdicionHomePage: React.FC = () => {
           </Link>
           <button
             onClick={handleSave}
-            disabled={saving || loading}
+            disabled={saving || loading || uploadsInFlight > 0}
             className="flex items-center gap-1.5 bg-white text-[#0055a2] hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-60"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Guardar
+            {saving || uploadsInFlight > 0 ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {uploadsInFlight > 0 ? 'Subiendo…' : 'Guardar'}
           </button>
           <button onClick={handleLogout} className="p-2 hover:bg-white/20 rounded-lg transition-colors" aria-label="Salir">
             <LogOut className="w-5 h-5" />
@@ -472,19 +542,13 @@ export const EdicionHomePage: React.FC = () => {
                   <ImageFields
                     mobile={slide.imageMobile}
                     desktop={slide.imageDesktop}
-                    onMobile={(v) => {
-                      const slides = [...content.hero.slides];
-                      slides[index] = { ...slides[index], imageMobile: v };
-                      setContent((c) => ({ ...c, hero: { slides } }));
-                    }}
-                    onDesktop={(v) => {
-                      const slides = [...content.hero.slides];
-                      slides[index] = { ...slides[index], imageDesktop: v };
-                      setContent((c) => ({ ...c, hero: { slides } }));
-                    }}
+                    onUploadingChange={trackUpload}
+                    onMobile={(v) => patchHeroSlideImage(index, 'imageMobile', v)}
+                    onDesktop={(v) => patchHeroSlideImage(index, 'imageDesktop', v)}
                   />
                   <p className="text-xs text-gray-500">
-                    Deja vacío para usar la imagen predeterminada del tema.
+                    Si subes solo una imagen, se usa también en el otro tamaño. Deja ambos vacíos
+                    para la imagen predeterminada del tema.
                   </p>
                   <label className="flex items-center gap-2 text-sm text-gray-700">
                     <input
@@ -545,6 +609,21 @@ export const EdicionHomePage: React.FC = () => {
                           }}
                         />
                       </div>
+                      <div>
+                        <FieldLabel>Link del botón</FieldLabel>
+                        <TextInput
+                          value={slide.buttonHref || ''}
+                          onChange={(v) => {
+                            const slides = [...content.hero.slides];
+                            slides[index] = { ...slides[index], buttonHref: v };
+                            setContent((c) => ({ ...c, hero: { slides } }));
+                          }}
+                          placeholder="/categorias/whisky o https://…"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          Vacío = scroll a productos. Ruta interna o URL completa.
+                        </p>
+                      </div>
                     </>
                   )}
                 </div>
@@ -561,11 +640,26 @@ export const EdicionHomePage: React.FC = () => {
               <ImageFields
                 mobile={content.registerBanner.imageMobile}
                 desktop={content.registerBanner.imageDesktop}
+                onUploadingChange={trackUpload}
                 onMobile={(v) =>
-                  setContent((c) => ({ ...c, registerBanner: { ...c.registerBanner, imageMobile: v } }))
+                  setContent((c) => ({
+                    ...c,
+                    registerBanner: {
+                      ...c.registerBanner,
+                      imageMobile: v,
+                      imageDesktop: c.registerBanner.imageDesktop || v,
+                    },
+                  }))
                 }
                 onDesktop={(v) =>
-                  setContent((c) => ({ ...c, registerBanner: { ...c.registerBanner, imageDesktop: v } }))
+                  setContent((c) => ({
+                    ...c,
+                    registerBanner: {
+                      ...c.registerBanner,
+                      imageDesktop: v,
+                      imageMobile: c.registerBanner.imageMobile || v,
+                    },
+                  }))
                 }
               />
               <div>
@@ -608,6 +702,7 @@ export const EdicionHomePage: React.FC = () => {
               <ImageField
                 label="Imagen"
                 value={content.about.image}
+                onUploadingChange={trackUpload}
                 onChange={(v) => setContent((c) => ({ ...c, about: { ...c.about, image: v } }))}
               />
               <div>

@@ -64,7 +64,7 @@ export function useHomeContent() {
 
     async function load() {
       try {
-        const res = await fetch('/api/home-content');
+        const res = await fetch('/api/home-content', { cache: 'no-store' });
         if (!res.ok) {
           throw new Error('No se pudo cargar el contenido');
         }

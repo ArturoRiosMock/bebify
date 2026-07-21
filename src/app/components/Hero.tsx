@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import Slider, { Settings } from 'react-slick';
 import { motion } from 'motion/react';
 import { ShoppingCart } from 'lucide-react';
@@ -7,6 +8,49 @@ import { useHomeContentValue } from '@/app/context/HomeContentContext';
 import type { HeroSlide } from '@/types/homeContent';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
+
+const CTA_CLASS =
+  'bg-[#0055a2] text-white px-8 py-3 rounded-lg hover:bg-[#004488] transition-colors font-bold text-sm inline-flex items-center gap-2';
+
+function HeroCta({
+  buttonText,
+  buttonHref,
+  onShopNowClick,
+}: {
+  buttonText: string;
+  buttonHref?: string;
+  onShopNowClick: () => void;
+}) {
+  const href = (buttonHref || '').trim();
+  const label = (
+    <>
+      <ShoppingCart className="w-5 h-5" />
+      {buttonText}
+    </>
+  );
+
+  if (!href) {
+    return (
+      <button type="button" onClick={onShopNowClick} className={CTA_CLASS}>
+        {label}
+      </button>
+    );
+  }
+
+  if (/^https?:\/\//i.test(href)) {
+    return (
+      <a href={href} className={CTA_CLASS} rel="noopener noreferrer">
+        {label}
+      </a>
+    );
+  }
+
+  return (
+    <Link to={href} className={CTA_CLASS}>
+      {label}
+    </Link>
+  );
+}
 
 interface HeroProps {
   onShopNowClick: () => void;
@@ -29,12 +73,10 @@ const SLIDER_SETTINGS: Settings = {
 };
 
 function resolveSlideImages(slide: HeroSlide, index: number) {
-  const desktop =
-    slide.imageDesktop ||
-    (index === 0 ? heroSlide1 : GIFFARD_DESKTOP);
-  const mobile = slide.imageMobile
-    || (slide.imageOnly ? null : slide.imageDesktop)
-    || (index === 0 ? heroSlide1 : GIFFARD_MOBILE);
+  const fallbackDesktop = index === 0 ? heroSlide1 : GIFFARD_DESKTOP;
+  const fallbackMobile = index === 0 ? heroSlide1 : GIFFARD_MOBILE;
+  const desktop = slide.imageDesktop || slide.imageMobile || fallbackDesktop;
+  const mobile = slide.imageMobile || slide.imageDesktop || fallbackMobile;
 
   return { desktop, mobile };
 }
@@ -103,14 +145,11 @@ function HeroSlideContent({
                 )}
 
                 {slide.buttonText && (
-                  <button
-                    type="button"
-                    onClick={onShopNowClick}
-                    className="bg-[#0055a2] text-white px-8 py-3 rounded-lg hover:bg-[#004488] transition-colors font-bold text-sm flex items-center gap-2"
-                  >
-                    <ShoppingCart className="w-5 h-5" />
-                    {slide.buttonText}
-                  </button>
+                  <HeroCta
+                    buttonText={slide.buttonText}
+                    buttonHref={slide.buttonHref}
+                    onShopNowClick={onShopNowClick}
+                  />
                 )}
               </motion.div>
             </div>
@@ -148,6 +187,14 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
     ] satisfies HeroSlide[];
   }, [content.hero.slides]);
 
+  const sliderKey = useMemo(
+    () =>
+      slides
+        .map((s) => `${s.imageMobile}|${s.imageDesktop}|${s.title}|${s.imageOnly ? 1 : 0}`)
+        .join('||'),
+    [slides],
+  );
+
   const sliderSettings = useMemo(
     () => ({
       ...SLIDER_SETTINGS,
@@ -160,9 +207,9 @@ export const Hero = ({ onShopNowClick }: HeroProps) => {
 
   return (
     <section className="relative bg-gray-100 overflow-hidden hero-slider">
-      <Slider key={slides.length} {...sliderSettings}>
+      <Slider key={sliderKey} {...sliderSettings}>
         {slides.map((slide, index) => (
-          <div key={index}>
+          <div key={`${index}-${slide.imageDesktop}-${slide.imageMobile}`}>
             <HeroSlideContent slide={slide} index={index} onShopNowClick={onShopNowClick} />
           </div>
         ))}

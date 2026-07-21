@@ -7,7 +7,8 @@
         "title": "La Plataforma de Bebidas B2B",
         "subtitle": "Centraliza tus compras de bebidas con acceso a más de 2,000 productos de más de 200 proveedores",
         "badge": "B2B",
-        "buttonText": "EXPLORAR CATÁLOGO"
+        "buttonText": "EXPLORAR CATÁLOGO",
+        "buttonHref": ""
       },
       {
         "imageMobile": "/banners/hero-giffard-mobile.jpeg",
@@ -16,6 +17,7 @@
         "subtitle": "",
         "badge": "",
         "buttonText": "",
+        "buttonHref": "",
         "imageOnly": true
       }
     ]
