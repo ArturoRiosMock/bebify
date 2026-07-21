@@ -29,7 +29,7 @@ function HeroCta({
     </>
   );
 
-  const stopSliderCapture = (e: React.MouseEvent) => {
+  const stopSliderDrag = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
@@ -37,8 +37,9 @@ function HeroCta({
     return (
       <button
         type="button"
+        onMouseDown={stopSliderDrag}
         onClick={(e) => {
-          stopSliderCapture(e);
+          stopSliderDrag(e);
           onShopNowClick();
         }}
         className={CTA_CLASS}
@@ -54,7 +55,8 @@ function HeroCta({
         href={href}
         className={CTA_CLASS}
         rel="noopener noreferrer"
-        onClick={stopSliderCapture}
+        onMouseDown={stopSliderDrag}
+        onClick={stopSliderDrag}
       >
         {label}
       </a>
@@ -62,7 +64,12 @@ function HeroCta({
   }
 
   return (
-    <Link to={href} className={CTA_CLASS} onClick={stopSliderCapture}>
+    <Link
+      to={href}
+      className={CTA_CLASS}
+      onMouseDown={stopSliderDrag}
+      onClick={stopSliderDrag}
+    >
       {label}
     </Link>
   );
