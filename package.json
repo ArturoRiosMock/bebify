@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "node scripts/generate-sitemap.mjs && vite build",
+    "build": "node scripts/sync-product-redirects-to-vercel.mjs && node scripts/generate-sitemap.mjs && vite build",
     "dev": "vite"
   },
   "dependencies": {
