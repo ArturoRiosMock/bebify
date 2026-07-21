@@ -89,8 +89,8 @@ export const SobreNosotrosPage: React.FC = () => {
             <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-5">
               <MapPin className="w-5 h-5 text-[#0c3c1f] mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="font-semibold text-[#212121] mb-1">Dirección</h4>
-                <p className="text-[#717182] text-sm">{about.contact.address}</p>
+                <h4 className="font-semibold text-[#212121] mb-1">{about.contact.shipping.title}</h4>
+                <p className="text-[#717182] text-sm">{about.contact.shipping.description}</p>
               </div>
             </div>
             <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-5">

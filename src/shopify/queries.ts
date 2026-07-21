@@ -153,6 +153,10 @@ export const GET_PRODUCT_BY_HANDLE = `
       productType
       vendor
       tags
+      seo {
+        title
+        description
+      }
       priceRange {
         minVariantPrice {
           amount

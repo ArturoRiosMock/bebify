@@ -14,6 +14,7 @@ import { SearchResultsPage } from '@/app/pages/SearchResultsPage';
 import { BlogPage } from '@/app/pages/BlogPage';
 import { ArticlePage } from '@/app/pages/ArticlePage';
 import { PolicyDocumentPage } from '@/app/pages/PolicyDocumentPage';
+import { EdicionHomePage } from '@/app/pages/EdicionHomePage';
 import { ErrorBoundary } from '@/app/components/ErrorBoundary';
 import { toCanonicalCollectionHandle } from '@/shopify/collection-handles';
 import { privacyPolicy, refundPolicy, termsOfService } from '@/content/mrbrown/policies';
@@ -111,6 +112,7 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
         <Route path="/admin/banners" element={<AdminBannersPage />} />
+        <Route path="/edicion" element={<EdicionHomePage />} />
         {/* Rutas de Shopify: redirigir checkout y carrito al dominio nativo */}
         <Route path="/cart/*" element={<ShopifyRedirect />} />
         <Route path="/checkouts/*" element={<ShopifyRedirect />} />

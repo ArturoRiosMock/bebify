@@ -27,3 +27,7 @@ npm-debug.log*
 # Vercel
 .vercel
 .env*.local
+
+# Uploads locales del editor /edicion
+public/uploads/home/*
+!public/uploads/home/.gitkeep

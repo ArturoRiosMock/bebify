@@ -47,9 +47,17 @@
       "source": "/search",
       "destination": "/buscar",
       "permanent": false
+    },
+    {
+      "source": "/checkouts/:path*",
+      "destination": "https://mrbrownmx.myshopify.com/checkouts/:path*",
+      "permanent": false
     }
   ],
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }

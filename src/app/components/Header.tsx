@@ -8,7 +8,7 @@ import { PLACEHOLDER_IMAGES } from '@/assets/placeholders';
 import { useShopifyCollections } from '@/shopify/hooks/useShopifyCollections';
 import { SearchDrawer } from '@/app/components/SearchDrawer';
 import { MegaMenuPanel } from '@/app/components/MegaMenuPanel';
-import { resolveDesktopNav, type NavDropdownEntry } from '@/config/nav-desktop';
+import { resolveDesktopNav, catalogEntryHref, type CatalogEntry } from '@/config/category-catalog';
 import { DEFAULT_CATEGORY_ICON, getCategoryIcon, getNavGroupIcon } from '@/config/category-icons';
 
 const logo = PLACEHOLDER_IMAGES.logo;
@@ -76,17 +76,23 @@ export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDr
     setMobileMenuOpen(false);
   };
 
-  const goToNavEntry = (entry: NavDropdownEntry) => {
+  const goToNavEntry = (entry: CatalogEntry) => {
+    if (entry.type === 'heading') return;
     if (entry.type === 'route') {
       navigate(entry.path);
       setMobileMenuOpen(false);
       return;
     }
-    handleCategoryClick(entry.handle);
+    navigate(catalogEntryHref(entry));
+    setMobileMenuOpen(false);
   };
 
-  const MobileEntryIcon = ({ entry }: { entry: NavDropdownEntry }) => {
-    const Icon = entry.type === 'collection' ? getCategoryIcon(entry.handle) : DEFAULT_CATEGORY_ICON;
+  const MobileEntryIcon = ({ entry }: { entry: CatalogEntry }) => {
+    if (entry.type === 'heading') return null;
+    const iconHandle =
+      entry.type === 'collection' ? entry.handle : entry.collectionHandle;
+    const Icon =
+      entry.type === 'route' ? DEFAULT_CATEGORY_ICON : getCategoryIcon(iconHandle);
     return <Icon className="h-5 w-5 shrink-0 text-[#0c3c1f]" aria-hidden />;
   };
 
@@ -386,17 +392,35 @@ export const Header = ({ onCartClick, onWishlistClick, onCategoryClick, searchDr
                           />
                         </summary>
                         <div className="border-t border-gray-100 px-2 py-2">
-                          {item.entries.map((entry) => (
-                            <button
-                              key={entry.type === 'route' ? entry.path : entry.handle}
-                              type="button"
-                              onClick={() => goToNavEntry(entry)}
-                              className="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-sm text-[#212121] transition-colors hover:bg-[#0a5028] hover:text-white active:bg-[#0a5028]/80 active:text-white"
-                            >
-                              <MobileEntryIcon entry={entry} />
-                              {entry.label}
-                            </button>
-                          ))}
+                          {item.entries.map((entry, index) => {
+                            if (entry.type === 'heading') {
+                              return (
+                                <p
+                                  key={`${item.id}-h-${index}`}
+                                  className="px-4 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#9ca3af] first:pt-0"
+                                >
+                                  {entry.label}
+                                </p>
+                              );
+                            }
+                            const key =
+                              entry.type === 'route'
+                                ? entry.path
+                                : entry.type === 'tag'
+                                  ? `tag-${entry.tag}`
+                                  : entry.handle;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => goToNavEntry(entry)}
+                                className="flex min-h-[44px] w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-sm text-[#212121] transition-colors hover:bg-[#0a5028] hover:text-white active:bg-[#0a5028]/80 active:text-white"
+                              >
+                                <MobileEntryIcon entry={entry} />
+                                {entry.label}
+                              </button>
+                            );
+                          })}
                           {item.viewAllLabel && item.viewAllHandle ? (
                             <button
                               type="button"

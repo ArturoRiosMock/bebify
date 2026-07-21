@@ -43,6 +43,7 @@ interface CartContextType {
   getTotalPrice: () => number;
   getTotalItems: () => number;
   goToCheckout?: () => Promise<boolean>;
+  importSharedCart?: (lines: Array<{ variantId: string; quantity: number }>) => Promise<boolean>;
   updateAttributes?: (attributes: Array<{ key: string; value: string }>) => Promise<boolean>;
   isShopifyCart: boolean;
   cartLoading: boolean;
@@ -153,6 +154,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     getTotalPrice,
     getTotalItems,
     goToCheckout: isShopify ? shopify.goToCheckout : undefined,
+    importSharedCart: isShopify ? shopify.importSharedCart : undefined,
     updateAttributes: isShopify ? shopify.updateAttributes : undefined,
     isShopifyCart: isShopify,
     cartLoading: shopify.loading,

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ProductDetail } from '@/app/components/ProductDetail';
 import { JsonLd } from '@/app/components/JsonLd';
 import { getProductByHandle } from '@/shopify/products';
+import { resolveProductHandleRedirect } from '@/shopify/product-handle-redirects';
 import { useShopifyProducts } from '@/shopify/hooks/useShopifyProducts';
 import { useDocumentMeta } from '@/app/hooks/useDocumentMeta';
 import { absoluteUrl } from '@/content/mrbrown/seo-defaults';
@@ -55,6 +56,13 @@ export const ProductPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
+        // Primero el mapa local: evita 404 / fuzzy-match con handles SKU ya renombrados.
+        const redirected = await resolveProductHandleRedirect(handle);
+        if (redirected) {
+          navigate(`/producto/${redirected}`, { replace: true });
+          return;
+        }
+
         const fetched = await getProductByHandle(handle);
         if (fetched) {
           if (fetched.handle && fetched.handle !== handle) {
@@ -62,9 +70,10 @@ export const ProductPage: React.FC = () => {
             return;
           }
           setProduct(fetched);
-        } else {
-          setError('Producto no encontrado');
+          return;
         }
+
+        setError('Producto no encontrado');
       } catch (err) {
         console.error('Error fetching product:', err);
         setError('Error al cargar el producto');
@@ -82,7 +91,8 @@ export const ProductPage: React.FC = () => {
   };
 
   const metaDescription = product
-    ? truncate(
+    ? product.seoDescription ||
+      truncate(
         [
           product.vendor && `Marca: ${product.vendor}.`,
           product.beverageType && `Tipo: ${product.beverageType}.`,
@@ -99,7 +109,7 @@ export const ProductPage: React.FC = () => {
     : undefined;
 
   useDocumentMeta({
-    title: product?.name,
+    title: product?.seoTitle || product?.name,
     description: metaDescription,
     canonicalPath: product?.handle ? `/producto/${product.handle}` : undefined,
     ogImage: product?.image,

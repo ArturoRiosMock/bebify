@@ -29,11 +29,7 @@ function normalizePhoneMX(input: string): string | null {
   return null;
 }
 
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'POST') {
-    return json(405, { ok: false, error: 'Método no permitido' });
-  }
-
+export async function POST(req: Request): Promise<Response> {
   const storeDomain = process.env.SHOPIFY_ADMIN_STORE_DOMAIN;
   const adminToken = process.env.SHOPIFY_ADMIN_API_TOKEN;
   if (!storeDomain || !adminToken) {

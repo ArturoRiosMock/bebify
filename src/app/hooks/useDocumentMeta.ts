@@ -83,7 +83,12 @@ export const useDocumentMeta = (options: DocumentMetaOptions): void => {
   } = options;
 
   useEffect(() => {
-    const fullTitle = title ? `${title}${TITLE_SUFFIX}` : DEFAULT_TITLE;
+    // Si el título ya incluye el nombre del sitio (p. ej. seo.title de Shopify), no duplicar sufijo.
+    const fullTitle = title
+      ? title.includes(SITE_NAME)
+        ? title
+        : `${title}${TITLE_SUFFIX}`
+      : DEFAULT_TITLE;
     document.title = fullTitle;
 
     const descMeta = ensureMeta('meta[name="description"]', 'name', 'description');

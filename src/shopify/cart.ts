@@ -27,6 +27,27 @@ export const createCart = async (): Promise<ShopifyCart | null> => {
   }
 };
 
+// Crear carrito con líneas iniciales (p. ej. enlace compartido cart_link_id)
+export const createCartWithLines = async (
+  lines: Array<{ merchandiseId: string; quantity: number }>,
+): Promise<ShopifyCart | null> => {
+  try {
+    const data: any = await shopifyClient.request(CREATE_CART, {
+      input: { lines },
+    });
+
+    if (data.cartCreate.userErrors.length > 0) {
+      console.error('Error creating cart with lines:', data.cartCreate.userErrors);
+      return null;
+    }
+
+    return data.cartCreate.cart;
+  } catch (error) {
+    console.error('Error creating cart with lines:', error);
+    return null;
+  }
+};
+
 // Agregar item al carrito
 export const addToShopifyCart = async (
   cartId: string,

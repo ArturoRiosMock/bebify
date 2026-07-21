@@ -1,7 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { PartyPopper, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Hero } from '@/app/components/Hero';
 import { FlashDeals } from '@/app/components/FlashDeals';
 import { BrandsSection } from '@/app/components/BrandsSection';
@@ -10,6 +8,11 @@ import { FAQ } from '@/app/components/FAQ';
 import { ProductCard } from '@/app/components/ProductCard';
 import { AdBanner, getInlineAdSlots } from '@/app/components/AdBanner';
 import { JsonLd } from '@/app/components/JsonLd';
+import { HomeRegisterBanner } from '@/app/components/HomeRegisterBanner';
+import { HomeAbout } from '@/app/components/HomeAbout';
+import { HomeBenefits } from '@/app/components/HomeBenefits';
+import { HomeContentContext } from '@/app/context/HomeContentContext';
+import { useHomeContent } from '@/app/hooks/useHomeContent';
 import { useShopifyProducts } from '@/shopify/hooks/useShopifyProducts';
 import { useDocumentMeta } from '@/app/hooks/useDocumentMeta';
 import { organizationSchema, websiteSchema } from '@/content/mrbrown/seo-defaults';
@@ -25,6 +28,7 @@ type GridItem =
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const productsRef = useRef<HTMLElement>(null);
+  const { content } = useHomeContent();
   const { products, loading, error } = useShopifyProducts(
     HOME_FEATURED_COLLECTION_HANDLE,
     HOME_FEATURED_COLLECTION_TITLE
@@ -72,9 +76,10 @@ export const HomePage: React.FC = () => {
   const midBannerAfter = 8;
   const beforeMidBanner = gridItems.slice(0, midBannerAfter);
   const afterMidBanner = gridItems.slice(midBannerAfter);
+  const featuredTitle = content.carousels.featuredTitle || HOME_FEATURED_COLLECTION_TITLE;
 
   return (
-    <>
+    <HomeContentContext.Provider value={content}>
       <JsonLd schema={[organizationSchema(), websiteSchema()]} />
       <Hero onShopNowClick={scrollToProducts} />
 
@@ -85,52 +90,11 @@ export const HomePage: React.FC = () => {
 
       <FlashDeals />
 
-      {/* Event Quote CTA */}
-      <section className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-[100vw]">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-        >
-          <Link
-            to="/cotizar-evento"
-            className="block rounded-2xl overflow-hidden bg-gradient-to-r from-[#0c3c1f] via-[#1a5c35] to-[#0c3c1f] relative group"
-          >
-            <div className="absolute inset-0 opacity-10">
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundImage:
-                    'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.1) 35px, rgba(255,255,255,.1) 70px)',
-                }}
-              />
-            </div>
-            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 sm:px-10 py-8 sm:py-10">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-[#FDB93A] rounded-full flex items-center justify-center flex-shrink-0">
-                  <PartyPopper className="w-7 h-7 text-[#212121]" />
-                </div>
-                <div>
-                  <h3 className="text-white text-xl sm:text-2xl font-bold mb-1">
-                    ¿Planeas un evento?
-                  </h3>
-                  <p className="text-white/70 text-sm sm:text-base">
-                    Cotiza bebidas para tu boda, fiesta o reunión. Te armamos una propuesta a tu medida.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 bg-[#FDB93A] text-[#212121] px-6 py-3 rounded-lg font-bold text-sm whitespace-nowrap group-hover:bg-[#FF8A00] transition-colors flex-shrink-0">
-                Cotizar Evento
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-      </section>
+      <HomeRegisterBanner />
 
       <section ref={productsRef} className="container mx-auto px-3 sm:px-4 py-8 sm:py-12 max-w-[100vw]">
         <div className="mb-6 sm:mb-8">
-          <h2 className="text-[#212121]">Los Favoritos del Club</h2>
+          <h2 className="text-[#212121]">{featuredTitle}</h2>
         </div>
 
         {error && (
@@ -150,7 +114,7 @@ export const HomePage: React.FC = () => {
           </div>
         ) : products.length === 0 ? (
           <p className="text-[#717182] text-center py-12">
-            Pronto tendremos novedades en Los Favoritos del Club.
+            Pronto tendremos novedades en {featuredTitle}.
           </p>
         ) : (
           <>
@@ -227,6 +191,8 @@ export const HomePage: React.FC = () => {
         containerClassName="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-[100vw]"
       />
 
+      <HomeAbout />
+
       <Newsletter />
       <FAQ />
 
@@ -236,33 +202,7 @@ export const HomePage: React.FC = () => {
         containerClassName="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-[100vw]"
       />
 
-      <section className="bg-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#0c3c1f]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-[#0c3c1f] text-2xl">🚚</span>
-              </div>
-              <h3 className="text-[#212121] mb-2">Envío Rápido</h3>
-              <p className="text-[#717182]">Entrega en 24-48 horas</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#0c3c1f]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-[#0c3c1f] text-2xl">✓</span>
-              </div>
-              <h3 className="text-[#212121] mb-2">100% Original</h3>
-              <p className="text-[#717182]">Productos garantizados</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-[#0c3c1f]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-[#0c3c1f] text-2xl">💳</span>
-              </div>
-              <h3 className="text-[#212121] mb-2">Pago Seguro</h3>
-              <p className="text-[#717182]">Múltiples métodos de pago</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
+      <HomeBenefits />
+    </HomeContentContext.Provider>
   );
 };

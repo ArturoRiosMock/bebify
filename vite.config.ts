@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { homeContentDevApi } from './scripts/vite-home-content-dev.mjs'
 
 export default defineConfig({
   server: {
@@ -13,6 +14,7 @@ export default defineConfig({
     // Tailwind is not being actively used – do not remove them
     react(),
     tailwindcss(),
+    homeContentDevApi(),
   ],
   resolve: {
     alias: {

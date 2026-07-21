@@ -8,7 +8,7 @@ export const ContactoPage: React.FC = () => {
   useDocumentMeta({
     title: 'Contacto',
     description:
-      'Contacto Mr. Brown: correo, dirección en La Magdalena Contreras (CDMX), zonas de entrega y horarios. Atención por email y redes sociales.',
+      'Contacto Mr. Brown: correo, envío en 24 h en CDMX y Valle de Bravo, zonas de entrega y horarios. Atención por email y redes sociales.',
     canonicalPath: '/contacto',
   });
 
@@ -44,8 +44,8 @@ export const ContactoPage: React.FC = () => {
               <MapPin className="w-5 h-5 text-[#0c3c1f]" />
             </div>
             <div>
-              <h3 className="font-bold text-[#212121] mb-1">Dirección</h3>
-              <p className="text-[#717182] text-sm">{about.contact.address}</p>
+              <h3 className="font-bold text-[#212121] mb-1">{about.contact.shipping.title}</h3>
+              <p className="text-[#717182] text-sm">{about.contact.shipping.description}</p>
             </div>
           </motion.div>
 

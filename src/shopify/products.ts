@@ -54,6 +54,8 @@ export const convertShopifyProductToAppProduct = (shopifyProduct: ShopifyProduct
     volumeLabel: alcoholAttrs.volumeLabel,
     beverageType: alcoholAttrs.beverageType,
     origin: alcoholAttrs.origin,
+    seoTitle: shopifyProduct.seo?.title || undefined,
+    seoDescription: shopifyProduct.seo?.description || undefined,
   };
 };
 

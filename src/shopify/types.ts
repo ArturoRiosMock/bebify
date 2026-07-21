@@ -8,6 +8,10 @@ export interface ShopifyProduct {
   productType: string;
   vendor: string;
   tags: string[];
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+  };
   priceRange: {
     minVariantPrice: {
       amount: string;
@@ -200,4 +204,8 @@ export interface Product {
   beverageType?: string;
   /** País / región de origen (ej. "México") — NOM-142-SSA1/SCFI-2014 */
   origin?: string;
+  /** Meta title de Shopify Admin (seo.title), si está definido */
+  seoTitle?: string;
+  /** Meta description de Shopify Admin (seo.description), si está definida */
+  seoDescription?: string;
 }

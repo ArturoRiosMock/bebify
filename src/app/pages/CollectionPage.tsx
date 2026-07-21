@@ -2,17 +2,18 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import { ProductCard } from '@/app/components/ProductCard';
-import { AdBanner, getInlineAdSlots, shouldRenderAdSlot } from '@/app/components/AdBanner';
+import { AdBanner, getInlineAdSlots } from '@/app/components/AdBanner';
 import { Breadcrumbs } from '@/app/components/Breadcrumbs';
 import { PaginationControls } from '@/app/components/PaginationControls';
 import { useShopifyProducts } from '@/shopify/hooks/useShopifyProducts';
 import { useShopifyCollections } from '@/shopify/hooks/useShopifyCollections';
 import { useDocumentMeta } from '@/app/hooks/useDocumentMeta';
+import { CategorySidebar } from '@/app/components/CategorySidebar';
 import {
   getCollectionDisplayTitle,
   resolveShopifyCollectionHandle,
-  toCanonicalCollectionHandle,
 } from '@/shopify/collection-handles';
+import { findCatalogTagLabel } from '@/config/category-catalog';
 
 type GridItem =
   | { kind: 'product'; product: ReturnType<typeof useShopifyProducts>['products'][number] }
@@ -34,26 +35,35 @@ export const CollectionPage: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const productsTopRef = useRef<HTMLDivElement | null>(null);
+  const activeTag = searchParams.get('tag');
 
   useEffect(() => {
     setSortBy('default');
     setVendorFilter('');
     setDiscountOnly(false);
-  }, [handle]);
+  }, [handle, activeTag]);
 
   const shopifyHandle = handle ? resolveShopifyCollectionHandle(handle) : undefined;
   const currentCollection = collections.find((c) => c.handle === shopifyHandle);
-  const collectionTitle = !handle
+  const baseCollectionTitle = !handle
     ? 'Todos los productos'
     : getCollectionDisplayTitle(handle)
       || currentCollection?.title
       || handle.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
       || 'Colección';
+  const tagLabel = handle && activeTag ? findCatalogTagLabel(handle, activeTag) : undefined;
+  const collectionTitle = tagLabel ?? baseCollectionTitle;
 
-  const canonicalPath = handle ? `/categorias/${handle}` : '/productos';
+  const canonicalPath = handle
+    ? activeTag
+      ? `/categorias/${handle}?tag=${encodeURIComponent(activeTag)}`
+      : `/categorias/${handle}`
+    : '/productos';
   const collectionDescription = !handle
     ? 'Todos los productos disponibles en Mr. Brown: tequila, whisky, mezcal, vinos, cervezas y más, con envío rápido en CDMX.'
-    : `Compra ${collectionTitle.toLowerCase()} premium en Mr. Brown. Filtra por marca, precio y descuentos. Envío rápido en CDMX y zona metropolitana.`;
+    : activeTag
+      ? `Compra ${collectionTitle.toLowerCase()} en Mr. Brown. Filtra por marca, precio y descuentos. Envío rápido en CDMX y zona metropolitana.`
+      : `Compra ${baseCollectionTitle.toLowerCase()} premium en Mr. Brown. Filtra por marca, precio y descuentos. Envío rápido en CDMX y zona metropolitana.`;
 
   useDocumentMeta({
     title: collectionTitle,
@@ -75,6 +85,7 @@ export const CollectionPage: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     let list = products.filter((p) => {
+      if (activeTag && !p.tags?.includes(activeTag)) return false;
       if (vendorFilter && (p.vendor || '') !== vendorFilter) return false;
       if (discountOnly) {
         const hasDiscount = p.originalPrice != null && p.originalPrice > p.price;
@@ -90,7 +101,7 @@ export const CollectionPage: React.FC = () => {
     else if (sortBy === 'name-desc') sorted.sort((a, b) => b.name.localeCompare(a.name, 'es'));
 
     return sorted;
-  }, [products, sortBy, vendorFilter, discountOnly]);
+  }, [products, sortBy, vendorFilter, discountOnly, activeTag]);
 
   const filtersActive =
     sortBy !== 'default' || Boolean(vendorFilter) || discountOnly;
@@ -114,7 +125,7 @@ export const CollectionPage: React.FC = () => {
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handle, sortBy, vendorFilter, discountOnly]);
+  }, [handle, activeTag, sortBy, vendorFilter, discountOnly]);
 
   // Se a URL tem ?page inválido (>totalPages, negativo, NaN) ou redundante (=1), normaliza
   useEffect(() => {
@@ -193,7 +204,12 @@ export const CollectionPage: React.FC = () => {
             items={[
               { label: 'Inicio', to: '/' },
               ...(handle ? [{ label: 'Categorías', to: '/productos' }] : []),
-              { label: collectionTitle, to: canonicalPath },
+              ...(handle && activeTag
+                ? [
+                    { label: baseCollectionTitle, to: `/categorias/${handle}` },
+                    { label: collectionTitle, to: canonicalPath },
+                  ]
+                : [{ label: collectionTitle, to: canonicalPath }]),
             ]}
           />
         </div>
@@ -208,45 +224,7 @@ export const CollectionPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-8">
           <aside className="hidden lg:block">
-            <div className="sticky top-4 space-y-6">
-              <div>
-                <h3 className="text-[#0c3c1f] font-bold mb-4 text-sm uppercase tracking-wide">Categorías</h3>
-                <nav className="space-y-1">
-                  <Link
-                    to="/productos"
-                    className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
-                      !handle
-                        ? 'bg-[#0c3c1f] text-white font-medium'
-                        : 'text-[#212121] hover:bg-gray-100 hover:text-[#0c3c1f]'
-                    }`}
-                  >
-                    Todos los Productos
-                  </Link>
-                  {collections
-                    .filter((c) => c.handle !== 'ofertas-relampago')
-                    .map((col) => {
-                      const urlHandle = toCanonicalCollectionHandle(col.handle);
-                      return (
-                      <Link
-                        key={col.id}
-                        to={`/categorias/${urlHandle}`}
-                        className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
-                          urlHandle === handle
-                            ? 'bg-[#0c3c1f] text-white font-medium'
-                            : 'text-[#212121] hover:bg-gray-100 hover:text-[#0c3c1f]'
-                        }`}
-                      >
-                        {getCollectionDisplayTitle(urlHandle) || col.title}
-                      </Link>
-                      );
-                    })}
-                </nav>
-              </div>
-
-              {shouldRenderAdSlot('collection-sidebar-skyscraper') && (
-                <AdBanner slotId="collection-sidebar-skyscraper" variant="sidebar" />
-              )}
-            </div>
+            <CategorySidebar collections={collections} activeHandle={handle} activeTag={activeTag} />
           </aside>
 
           <div ref={productsTopRef}>

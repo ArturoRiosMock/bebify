@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getOrCreateCart, getCart, addToShopifyCart, updateCartLine, removeFromShopifyCart, redirectToCheckout } from '@/shopify/cart';
+import { getOrCreateCart, getCart, addToShopifyCart, updateCartLine, removeFromShopifyCart, redirectToCheckout, createCartWithLines } from '@/shopify/cart';
 import { updateCartAttributes } from '@/shopify/mutations/cartAttributes';
 import { isShopifyConfigured } from '@/shopify/config';
 import type { ShopifyCart } from '@/shopify/types';
@@ -198,6 +198,32 @@ export const useShopifyCart = () => {
     });
   };
 
+  const importSharedCart = useCallback(
+    async (lines: Array<{ variantId: string; quantity: number }>): Promise<boolean> => {
+      if (!isShopifyConfigured() || lines.length === 0) return false;
+
+      setError(null);
+      return runCartOp(async () => {
+        const storefrontLines = lines.map((line) => ({
+          merchandiseId: line.variantId,
+          quantity: line.quantity,
+        }));
+
+        const newCart = await createCartWithLines(storefrontLines);
+        if (!newCart) {
+          setError('No se pudo importar el carrito compartido');
+          return false;
+        }
+
+        localStorage.setItem('shopifyCartId', newCart.id);
+        setCart(newCart);
+        setError(null);
+        return true;
+      }).catch(() => false);
+    },
+    [runCartOp],
+  );
+
   const goToCheckout = async (): Promise<boolean> => {
     setError(null);
     return runCartOp(async () => {
@@ -244,6 +270,7 @@ export const useShopifyCart = () => {
     removeAllItems,
     updateAttributes,
     goToCheckout,
+    importSharedCart,
     refreshCart,
     getTotalItems,
     getSubtotal,

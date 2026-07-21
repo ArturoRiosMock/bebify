@@ -21,6 +21,11 @@ export const about = {
   contact: {
     email: 'hola@mrbrown.com.mx',
     address: 'Avenida Contreras 267 int. 1, San Jerónimo Lídice, La Magdalena Contreras, CDMX, C.P. 10200',
+    shipping: {
+      title: 'Envío',
+      description:
+        'Encuentra tus bebidas favoritas con envío en 24 horas dentro de CDMX y Valle de Bravo.',
+    },
     facebook: 'https://www.facebook.com/profile.php?id=100076305783446',
     instagram: 'https://www.instagram.com/mrbrown.mx/',
     tiktok: 'https://www.tiktok.com/@mrbrown.com.mx',

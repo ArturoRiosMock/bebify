@@ -1,0 +1,118 @@
+{
+  "hero": {
+    "slides": [
+      {
+        "imageMobile": "/mr-brown-days-movil.jpg",
+        "imageDesktop": "/mr-brown-days-desktop.png",
+        "title": "",
+        "subtitle": "",
+        "badge": "",
+        "buttonText": "VER PROMOCIÓN",
+        "buttonHref": "/categorias/mr-brown-days",
+        "imageOnly": true
+      },
+      {
+        "imageMobile": "/giffard-movil.jpeg",
+        "imageDesktop": "/giffard-desktop.jpeg",
+        "title": "",
+        "subtitle": "",
+        "badge": "",
+        "buttonText": "",
+        "buttonHref": "",
+        "imageOnly": true
+      },
+      {
+        "imageMobile": "/barra_libre.jpg",
+        "imageDesktop": "/hero-barra-boda.webp",
+        "title": "",
+        "subtitle": "",
+        "badge": "",
+        "buttonText": "COTIZA AHORA",
+        "buttonHref": "/cotizar-evento",
+        "imageOnly": true
+      },
+      {
+        "imageMobile": "/mixologia.jpg",
+        "imageDesktop": "/hero-barra-mixologia.webp",
+        "title": "",
+        "subtitle": "",
+        "badge": "",
+        "buttonText": "COTIZA AHORA",
+        "buttonHref": "/cotizar-evento",
+        "imageOnly": true
+      },
+      {
+        "imageMobile": "/movil_mundial.png",
+        "imageDesktop": "/cta.jpg",
+        "title": "",
+        "subtitle": "",
+        "badge": "",
+        "buttonText": "VER PROMO-MUNDIALISTA",
+        "buttonHref": "/categorias/promo-mundialista",
+        "imageOnly": true
+      }
+    ]
+  },
+  "registerBanner": {
+    "imageMobile": "",
+    "imageDesktop": "",
+    "title": "¿Planeas un evento?",
+    "description": "Cotiza bebidas para tu boda, fiesta o reunión. Te armamos una propuesta a tu medida.",
+    "buttonText": "Cotizar Evento"
+  },
+  "about": {
+    "image": "/sobre_nosotros.jpg",
+    "imageAlt": "Mr. Brown — bebidas premium",
+    "badge": "Sobre nosotros",
+    "title": "Tu club de bebidas premium",
+    "paragraph1": "En Mr. Brown seleccionamos bebidas originales con envío rápido en CDMX y Valle de Bravo.",
+    "paragraph2": "También armamos barras para eventos sociales y corporativos.",
+    "statValue": "24h",
+    "statLabel": "Envíos en CDMX",
+    "features": [
+      {
+        "title": "100% originales",
+        "description": "Productos verificados"
+      },
+      {
+        "title": "Envío rápido",
+        "description": "CDMX y área metropolitana"
+      },
+      {
+        "title": "Eventos",
+        "description": "Barras a medida"
+      },
+      {
+        "title": "Asesoría",
+        "description": "Te ayudamos a elegir"
+      }
+    ],
+    "quote": "Bebidas premium con la experiencia Mr. Brown."
+  },
+  "benefits": [
+    {
+      "icon": "🚚",
+      "title": "Envío Rápido",
+      "description": "Entrega en 24-48 horas"
+    },
+    {
+      "icon": "✓",
+      "title": "100% Original",
+      "description": "Productos garantizados"
+    },
+    {
+      "icon": "💳",
+      "title": "Pago Seguro",
+      "description": "Múltiples métodos de pago"
+    },
+    {
+      "icon": "🎉",
+      "title": "Eventos",
+      "description": "Cotiza tu barra libre o mixología"
+    }
+  ],
+  "carousels": {
+    "featuredTitle": "Los Favoritos del Club",
+    "newArrivalsTitle": "Novedades"
+  }
+}

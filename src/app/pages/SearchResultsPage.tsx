@@ -2,15 +2,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { ProductCard } from '@/app/components/ProductCard';
-import { AdBanner, getInlineAdSlots, shouldRenderAdSlot } from '@/app/components/AdBanner';
+import { AdBanner, getInlineAdSlots } from '@/app/components/AdBanner';
 import { Breadcrumbs } from '@/app/components/Breadcrumbs';
 import { useShopifySearch } from '@/shopify/hooks/useShopifyProducts';
 import { useShopifyCollections } from '@/shopify/hooks/useShopifyCollections';
 import { useDocumentMeta } from '@/app/hooks/useDocumentMeta';
-import {
-  getCollectionDisplayTitle,
-  toCanonicalCollectionHandle,
-} from '@/shopify/collection-handles';
+import { CategorySidebar } from '@/app/components/CategorySidebar';
 import type { Product } from '@/shopify/types';
 
 type GridItem =
@@ -212,39 +209,7 @@ export const SearchResultsPage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-8">
           <aside className="hidden lg:block">
-            <div className="sticky top-4 space-y-6">
-              <div>
-                <h3 className="text-[#0c3c1f] font-bold mb-4 text-sm uppercase tracking-wide">
-                  Categorías
-                </h3>
-                <nav className="space-y-1">
-                  <Link
-                    to="/productos"
-                    className="block px-3 py-2 text-sm rounded-lg transition-colors text-[#212121] hover:bg-gray-100 hover:text-[#0c3c1f]"
-                  >
-                    Todos los Productos
-                  </Link>
-                  {collections
-                    .filter((c) => c.handle !== 'ofertas-relampago')
-                    .map((col) => {
-                      const urlHandle = toCanonicalCollectionHandle(col.handle);
-                      return (
-                      <Link
-                        key={col.id}
-                        to={`/categorias/${urlHandle}`}
-                        className="block px-3 py-2 text-sm rounded-lg transition-colors text-[#212121] hover:bg-gray-100 hover:text-[#0c3c1f]"
-                      >
-                        {getCollectionDisplayTitle(urlHandle) || col.title}
-                      </Link>
-                      );
-                    })}
-                </nav>
-              </div>
-
-              {shouldRenderAdSlot('collection-sidebar-skyscraper') && (
-                <AdBanner slotId="collection-sidebar-skyscraper" variant="sidebar" />
-              )}
-            </div>
+            <CategorySidebar collections={collections} />
           </aside>
 
           <div>
