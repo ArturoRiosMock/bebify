@@ -26,7 +26,7 @@ export default async function homeContentHandler(req, res) {
   if (req.method === 'GET') {
     try {
       const content = await getHomeContent();
-      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+      res.setHeader('Cache-Control', 'no-store');
       res.status(200).json(content);
     } catch (err) {
       res.status(500).json({ error: err.message || 'Error al leer contenido' });
