@@ -29,9 +29,20 @@ function HeroCta({
     </>
   );
 
+  const stopSliderCapture = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   if (!href) {
     return (
-      <button type="button" onClick={onShopNowClick} className={CTA_CLASS}>
+      <button
+        type="button"
+        onClick={(e) => {
+          stopSliderCapture(e);
+          onShopNowClick();
+        }}
+        className={CTA_CLASS}
+      >
         {label}
       </button>
     );
@@ -39,14 +50,19 @@ function HeroCta({
 
   if (/^https?:\/\//i.test(href)) {
     return (
-      <a href={href} className={CTA_CLASS} rel="noopener noreferrer">
+      <a
+        href={href}
+        className={CTA_CLASS}
+        rel="noopener noreferrer"
+        onClick={stopSliderCapture}
+      >
         {label}
       </a>
     );
   }
 
   return (
-    <Link to={href} className={CTA_CLASS}>
+    <Link to={href} className={CTA_CLASS} onClick={stopSliderCapture}>
       {label}
     </Link>
   );
