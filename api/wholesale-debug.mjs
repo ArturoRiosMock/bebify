@@ -3,16 +3,9 @@
 // del Blob y ejemplos de precios. Sirve para chequear rápido por qué un
 // cliente no ve mayoreo.
 import { isAdminCredentials } from './_lib/homeContent.mjs';
+import { parseJsonBody } from './_lib/http.mjs';
 import { adminGraphql } from './_lib/shopify.mjs';
 import { fetchWholesaleSnapshotFromBlob } from './_lib/samitaWholesale.mjs';
-
-function parseBody(req) {
-  try {
-    return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-  } catch {
-    return null;
-  }
-}
 
 async function customerByEmail(email) {
   const data = await adminGraphql(
@@ -31,7 +24,7 @@ export default async function wholesaleDebug(req, res) {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
-  const body = parseBody(req);
+  const body = parseJsonBody(req);
   if (!body) {
     res.status(400).json({ error: 'JSON inválido' });
     return;
@@ -48,10 +41,13 @@ export default async function wholesaleDebug(req, res) {
   }
 
   try {
-    const [customer, snapshot] = await Promise.all([
-      customerByEmail(email),
-      fetchWholesaleSnapshotFromBlob().catch(() => null),
-    ]);
+    const snapshotResult = await fetchWholesaleSnapshotFromBlob().catch((err) => {
+      console.warn('[wholesale-debug] no se pudo leer Blob:', err?.message || err);
+      return { error: err?.message || String(err) };
+    });
+    const snapshot = snapshotResult?.error ? null : snapshotResult;
+    const blobError = snapshotResult?.error;
+    const customer = await customerByEmail(email);
 
     const groups = snapshot?.groups || {};
     const availableTags = Object.keys(groups);
@@ -87,6 +83,7 @@ export default async function wholesaleDebug(req, res) {
         generatedFrom: snapshot?._generatedFrom,
         tagCount: availableTags.length,
         tags: availableTags,
+        blobError,
       },
     });
   } catch (err) {

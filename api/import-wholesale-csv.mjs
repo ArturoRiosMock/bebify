@@ -2,6 +2,7 @@
 // Sube un export CSV de Samita → snapshot Blob (merge con el vigente).
 // Auth: mismas credenciales que /edicion.
 import { isAdminCredentials } from './_lib/homeContent.mjs';
+import { parseJsonBody } from './_lib/http.mjs';
 import { mergeGroups, parseWholesaleCsv } from './_lib/wholesaleCsv.mjs';
 import {
   fetchWholesaleSnapshotFromBlob,
@@ -14,21 +15,13 @@ export const config = {
   maxDuration: 30,
 };
 
-function parseBody(req) {
-  try {
-    return typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-  } catch {
-    return null;
-  }
-}
-
 export default async function importWholesaleCsv(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
-  const body = parseBody(req);
+  const body = parseJsonBody(req);
   if (!body) {
     res.status(400).json({ error: 'JSON inválido' });
     return;
