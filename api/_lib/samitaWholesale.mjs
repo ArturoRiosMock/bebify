@@ -85,7 +85,9 @@ async function fetchPage({ apiKey, shopUrl, page, limit, rateLimitMs, maxRetries
   const url = new URL(API_BASE);
   url.searchParams.set('page', String(page));
   url.searchParams.set('limit', String(limit));
-  url.searchParams.set('status', 'active');
+  // Sin filtro status: el 27/07 Samita empezó a devolver SOLO 5 reglas
+  // desactivadas con status=active (filtro roto server-side); sin el
+  // parámetro devuelve las 47 reglas reales, igual que el snapshot bueno.
   url.searchParams.set('sort', 'descrease');
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
@@ -193,10 +195,26 @@ export async function buildWholesaleSnapshot(opts = {}) {
   };
 }
 
-export async function publishWholesaleSnapshotToBlob(snapshot) {
+export async function publishWholesaleSnapshotToBlob(snapshot, { allowShrink = false } = {}) {
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   if (!token) {
     throw new Error('Falta BLOB_READ_WRITE_TOKEN');
+  }
+
+  // Si el snapshot nuevo pierde más de la mitad de los grupos vigentes,
+  // es casi seguro un problema de API (como el filtro status roto del 27/07)
+  // y no un cambio real del cliente. Abortar antes de pisar producción.
+  if (!allowShrink) {
+    const current = await fetchWholesaleSnapshotFromBlob().catch(() => null);
+    const currentCount = Object.keys(current?.groups || {}).length;
+    const newCount = Object.keys(snapshot?.groups || {}).length;
+    if (currentCount >= 4 && newCount < currentCount / 2) {
+      const err = new Error(
+        `El snapshot nuevo tiene ${newCount} grupos y producción tiene ${currentCount}; caída sospechosa, se aborta para no borrar descuentos. Si el cambio es intencional, publicar con allowShrink.`,
+      );
+      err.code = 'SHRUNK_SNAPSHOT';
+      throw err;
+    }
   }
 
   try {
