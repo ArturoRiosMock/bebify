@@ -1,16 +1,19 @@
-# Sincroniza precios B2B desde Samita → api/_data/wholesale-pricing.json → push a main
-# (Vercel redeploya solo). No requiere export CSV manual.
+# Sync completo Samita → JSON (repo) + Blob (live en prod, sin esperar redeploy).
 #
-# Secrets requeridos (una sola vez en GitHub → Settings → Secrets):
-#   SAMITA_API_KEY  — Samita Wholesale → Settings → Public API (permiso View)
+# Secrets:
+#   SAMITA_API_KEY
+#   BLOB_READ_WRITE_TOKEN  (mismo de Vercel Blob)
 #
-# Límite Samita: ~1 request / 5 min. Un sync completo puede tardar >30 min.
+# Samita: ~1 req / 5 min. Un sync multi-página puede tardar >30 min.
+# No usar cada 5 minutos: el límite diario (~50) se agota.
 name: Sync wholesale pricing
 
 on:
-  schedule:
-    # 11:00 UTC ≈ 08:00 Argentina
-    - cron: '0 11 * * *'
+  # Cron DESACTIVADO 27/07: el parser no entiende la respuesta real de la API
+  # (47 reglas → 0 precios) y pisó producción con un snapshot vacío.
+  # Reactivar recién cuando el parser esté validado contra la API real.
+  # schedule:
+  #   - cron: '0 11 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -27,30 +30,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Require SAMITA_API_KEY
+      - name: Require secrets
         env:
           SAMITA_API_KEY: ${{ secrets.SAMITA_API_KEY }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
         run: |
           if [ -z "$SAMITA_API_KEY" ]; then
-            echo "::error::Falta el secret SAMITA_API_KEY. Créalo en Samita (Public API) y añádelo en GitHub → Settings → Secrets and variables → Actions."
+            echo "::error::Falta secret SAMITA_API_KEY"
             exit 1
+          fi
+          if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo "::warning::Sin BLOB_READ_WRITE_TOKEN: solo se actualizará el JSON del repo (requiere redeploy)."
           fi
 
       - name: Sync pricing from Samita
         env:
           SAMITA_API_KEY: ${{ secrets.SAMITA_API_KEY }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           SAMITA_SHOP_URL: mr-brown-mayoreo.myshopify.com
-        run: node scripts/sync-wholesale-pricing.mjs
+        run: |
+          if [ -n "$BLOB_READ_WRITE_TOKEN" ]; then
+            node scripts/sync-wholesale-pricing.mjs --publish-blob
+          else
+            node scripts/sync-wholesale-pricing.mjs
+          fi
 
-      - name: Commit and push if changed
+      - name: Commit and push if JSON changed
         run: |
           git config user.name "bebify-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
