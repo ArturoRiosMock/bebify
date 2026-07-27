@@ -39,7 +39,11 @@ function addPrice(groups, tag, productId, price) {
 
 /**
  * @param {string} csvText
- * @returns {{ groups: Record<string, Record<string, number>>, warnings: string[] }}
+ * @returns {{
+ *   groups: Record<string, Record<string, number>>,
+ *   skippedRules: Array<{ name: string, reason: string, productIds: string[] }>,
+ *   warnings: string[]
+ * }}
  */
 export function parseWholesaleCsv(csvText) {
   const warnings = [];
@@ -63,8 +67,17 @@ export function parseWholesaleCsv(csvText) {
   };
 
   const groups = {};
+  const ruleStats = new Map();
   let currentTag = null;
   let ruleActive = false;
+
+  const bumpStat = (tag, hadPrice, productIds) => {
+    const stat = ruleStats.get(tag) || { withPrice: 0, withoutPrice: 0, productIds: new Set() };
+    if (hadPrice) stat.withPrice += 1;
+    else stat.withoutPrice += 1;
+    for (const id of productIds) stat.productIds.add(id);
+    ruleStats.set(tag, stat);
+  };
 
   for (let i = 1; i < lines.length; i += 1) {
     const row = parseCsvLine(lines[i]);
@@ -83,6 +96,8 @@ export function parseWholesaleCsv(csvText) {
     const discountType = row[COL.discountType]?.trim().toLowerCase();
     if (discountType !== 'fixed-amount') continue;
 
+    const productIds = productIdsRaw.split(',').map((s) => s.trim()).filter(Boolean);
+
     let price = parsePrice(row[header.indexOf(currentTag)]);
     if (price == null) {
       for (let c = tagStart; c < row.length; c += 1) {
@@ -90,10 +105,14 @@ export function parseWholesaleCsv(csvText) {
         if (price != null) break;
       }
     }
-    if (price == null) continue;
+    if (price == null) {
+      bumpStat(currentTag, false, productIds);
+      continue;
+    }
 
-    for (const productId of productIdsRaw.split(',')) {
-      addPrice(groups, tag, productId, price);
+    bumpStat(currentTag, true, productIds);
+    for (const productId of productIds) {
+      addPrice(groups, currentTag, productId, price);
     }
   }
 
@@ -105,7 +124,19 @@ export function parseWholesaleCsv(csvText) {
     }
   }
 
-  return { groups: sorted, warnings };
+  const skippedRules = [];
+  for (const [tag, stat] of ruleStats) {
+    if (stat.withPrice === 0 && stat.withoutPrice > 0) {
+      skippedRules.push({
+        name: tag,
+        reason:
+          'Samita exportó esta regla con precio 0 o vacío. Abrí la regla en Samita, escribí el "Fixed amount" y presioná Save (no sólo Enter en el input). Si no persiste, usá la entrada manual.',
+        productIds: [...stat.productIds],
+      });
+    }
+  }
+
+  return { groups: sorted, skippedRules, warnings };
 }
 
 /** Merge de dos snapshots: `override` gana sobre `base` a nivel grupo. */

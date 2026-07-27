@@ -303,6 +303,10 @@ export const EdicionHomePage: React.FC = () => {
   const [syncingWholesale, setSyncingWholesale] = useState(false);
   const [wholesaleMessage, setWholesaleMessage] = useState('');
   const [importingCsv, setImportingCsv] = useState(false);
+  const [manualTag, setManualTag] = useState('');
+  const [manualPrice, setManualPrice] = useState('');
+  const [manualProductIds, setManualProductIds] = useState('');
+  const [manualSubmitting, setManualSubmitting] = useState(false);
   const [debugEmail, setDebugEmail] = useState('');
   const [debuggingCustomer, setDebuggingCustomer] = useState(false);
   const [debugResult, setDebugResult] = useState<null | {
@@ -429,12 +433,18 @@ export const EdicionHomePage: React.FC = () => {
         productCount?: number;
         importedGroups?: string[];
         preservedFromBlob?: string[];
+        skippedRules?: Array<{ name: string; reason: string; productIds: string[] }>;
       };
       if (!res.ok) {
-        throw new Error(data.error || 'No se pudo importar el CSV.');
+        const skipped = (data.skippedRules ?? [])
+          .map((r) => `${r.name} (${r.productIds.length} productos)`)
+          .join(', ');
+        const base = data.error || 'No se pudo importar el CSV.';
+        throw new Error(skipped ? `${base} Reglas ignoradas: ${skipped}.` : base);
       }
       const imported = (data.importedGroups ?? []).slice(0, 8);
       const preserved = (data.preservedFromBlob ?? []).slice(0, 6);
+      const skipped = (data.skippedRules ?? []).map((r) => `${r.name} (${r.productIds.length})`);
       let msg = `CSV importado: ${data.tagCount ?? 0} grupos totales, ${data.productCount ?? 0} productos. Los usuarios lo ven en ~1 minuto.`;
       if (imported.length) {
         msg += ` Importados: ${imported.join(', ')}${(data.importedGroups?.length ?? 0) > imported.length ? '…' : ''}.`;
@@ -442,12 +452,68 @@ export const EdicionHomePage: React.FC = () => {
       if (preserved.length) {
         msg += ` Conservados (no venían en el CSV): ${preserved.join(', ')}${(data.preservedFromBlob?.length ?? 0) > preserved.length ? '…' : ''}.`;
       }
+      if (skipped.length) {
+        msg += ` Skippeados por precio 0/vacío: ${skipped.join(', ')}. Cargalos en la Entrada manual o guardá el precio en Samita.`;
+      }
       setWholesaleMessage(msg);
     } catch (err) {
       setWholesaleMessage(err instanceof Error ? err.message : 'Error al importar el CSV');
     } finally {
       setImportingCsv(false);
       if (csvInputRef.current) csvInputRef.current.value = '';
+    }
+  };
+
+  const handleManualEntry = async () => {
+    const tag = manualTag.trim();
+    const price = Number(manualPrice);
+    const productIds = manualProductIds.trim();
+    if (!tag) {
+      setWholesaleMessage('Falta el tag (ej: cheve o Grupo Kauri).');
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      setWholesaleMessage('Precio inválido: escribí un número mayor a 0.');
+      return;
+    }
+    if (!productIds) {
+      setWholesaleMessage('Pegá al menos un Product ID (uno por línea o separados por coma).');
+      return;
+    }
+    setManualSubmitting(true);
+    setWholesaleMessage('');
+    try {
+      const creds = getEdicionCredentials();
+      if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+      const res = await fetch('/api/set-wholesale-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: creds.username,
+          password: creds.password,
+          tag,
+          price,
+          productIds,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        tag?: string;
+        price?: number;
+        productCount?: number;
+        tagCount?: number;
+      };
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo publicar la entrada manual.');
+      }
+      setWholesaleMessage(
+        `Entrada manual actualizada: tag "${data.tag}" con $${data.price} para ${data.productCount} productos (${data.tagCount ?? 0} grupos totales). El cliente lo ve en ~1 minuto.`,
+      );
+      setManualProductIds('');
+    } catch (err) {
+      setWholesaleMessage(err instanceof Error ? err.message : 'Error al publicar entrada manual');
+    } finally {
+      setManualSubmitting(false);
     }
   };
 
@@ -679,6 +745,50 @@ export const EdicionHomePage: React.FC = () => {
                 className="sr-only"
                 onChange={(e) => void handleImportCsv(e.target.files?.[0])}
               />
+            </div>
+            <div className="border-t border-gray-100 pt-2 space-y-2">
+              <p className="text-[11px] font-semibold text-gray-700">Entrada manual</p>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Cuando Samita no persiste el "Fixed amount": publicá tag + precio + IDs de producto
+                directo al Blob.
+              </p>
+              <input
+                type="text"
+                value={manualTag}
+                onChange={(e) => setManualTag(e.target.value)}
+                placeholder="Tag (ej: cheve)"
+                className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0055a2]"
+              />
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={manualPrice}
+                onChange={(e) => setManualPrice(e.target.value)}
+                placeholder="Precio (ej: 150)"
+                className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0055a2]"
+              />
+              <textarea
+                value={manualProductIds}
+                onChange={(e) => setManualProductIds(e.target.value)}
+                placeholder="Product IDs (uno por línea o separados por coma)"
+                rows={3}
+                className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0055a2] font-mono"
+              />
+              <button
+                type="button"
+                onClick={handleManualEntry}
+                disabled={manualSubmitting}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#0055a2] px-3 py-2 text-xs font-semibold text-[#0055a2] hover:bg-blue-50 disabled:opacity-60"
+              >
+                {manualSubmitting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5" />
+                )}
+                {manualSubmitting ? 'Publicando…' : 'Publicar precio manual'}
+              </button>
             </div>
             <div className="border-t border-gray-100 pt-2 space-y-2">
               <p className="text-[11px] font-semibold text-gray-700">Diagnóstico cliente</p>

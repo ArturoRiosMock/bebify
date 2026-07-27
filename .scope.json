@@ -1,15 +1,15 @@
 {
-  "prompt": "El botón Actualizar precios debe funcionar y también respetar el import manual del CSV; los descuentos no cargan",
-  "intent": "La API pública de Samita no expone los precios que se ven en su UI (Cheve/Kauri quedan percent:null). Agregar en /edicion un import por CSV (mismo formato que usamos a mano) que actualiza Blob + JSON, y confirmar por qué Uri no ve descuentos ahora.",
+  "prompt": "al importar el csv me sale 'no contiene grupos con fixed-amount' pero en Samita se ve $150 asignado",
+  "intent": "El CSV export de Samita para la regla cheve trae value=0 (bug de Samita); mejorar el error del import para explicar qué reglas quedaron sin precio y agregar entrada manual (tag+precio+productIds) para bypassear a Samita cuando no persiste valores.",
   "decomposition": [
     {
       "step": 1,
-      "subtask": "Verificar por qué el cliente no ve Kauri hoy (Blob vs cache vs tag).",
-      "expected_files": []
+      "subtask": "Rescate inmediato: publicar cheve $150 a mano al Blob para los 8 productos de la regla, cubriendo caja cheve/Cheve.",
+      "expected_files": [".scope.json"]
     },
     {
       "step": 2,
-      "subtask": "Agregar endpoint POST /api/import-wholesale-csv que reciba el export de Samita y publique Blob (mismo importer que a mano).",
+      "subtask": "Parser CSV: reportar skippedRules con nombre, motivo (value=0) y product ids; endpoint expone la lista en la respuesta.",
       "expected_files": [
         "api/_lib/wholesaleCsv.mjs",
         "api/import-wholesale-csv.mjs"
@@ -17,10 +17,10 @@
     },
     {
       "step": 3,
-      "subtask": "UI en /edicion: subir CSV → llama al endpoint → mensaje con grupos importados. Agrega también endpoint y bloque de diagnóstico de cliente para inspección rápida de tags.",
+      "subtask": "Entrada manual: endpoint POST /api/set-wholesale-group + sección en /edicion (tag + precio + product IDs) que hace merge en Blob.",
       "expected_files": [
-        "src/app/pages/EdicionHomePage.tsx",
-        "api/wholesale-debug.mjs"
+        "api/set-wholesale-group.mjs",
+        "src/app/pages/EdicionHomePage.tsx"
       ]
     }
   ],
@@ -28,115 +28,24 @@
     {
       "step": 1,
       "verdict": "ACCEPT",
-      "note": "curl POST /api/wholesale-debug ulopez@gpbebidas.mx en prod: tags = [B2B, cheve, wholesale], no matchea con ningún grupo del snapshot (46 tags, Kauri sigue presente con Hendricks 676.72). Diagnóstico: le sacaron el tag Grupo Kauri y la regla cheve no expone precios por API."
+      "note": "publishWholesaleSnapshotToBlob con groups.cheve = groups.Cheve = {8 ids: 150}; Blob live devuelve 48 grupos con Kauri intacto (Hendricks 676.72). Debug endpoint confirma Uri ahora en tag Grupo Kauri (le cambiaron el tag mientras investigábamos)."
     },
     {
       "step": 2,
       "verdict": "ACCEPT",
-      "note": "parseWholesaleCsv aplicado al CSV existente (WholesalePricingExport1785182943.csv) produce 44 grupos consistentes con los tags de Samita; import endpoint hace merge sobre el Blob y usa allowShrink=true para no bloquear si Samita desactiva reglas; guardias: 5 MB, auth admin, mode default merge."
+      "note": "parseWholesaleCsv sobre WholesalePricingExport1785185158.csv devuelve groups=[], skippedRules=[{name:'Cheve', productIds:[8 ids], reason:'...precio 0 o vacío...'}]. Endpoint responde 422 con lista detallada."
     },
     {
       "step": 3,
       "verdict": "ACCEPT",
-      "note": "Deploy dpl_8AULYCE4dATZiNRoeudZg9iPhB4S promovido a bebify.mx; snapshot de /edicion confirma botones nuevos Sync desde API, Importar CSV Samita y bloque Diagnóstico cliente; vite build pasa sin errores; no linter findings en archivos nuevos."
+      "note": "POST /api/set-wholesale-group valida tag/precio/ids (regex /^\\d+$/), hace merge sobre Blob previo y llama invalidateWholesaleCache. UI /edicion: bloque Entrada manual con tag + precio + textarea de IDs; vite build limpio, ReadLints sin errores, anti-slop clean."
     }
   ],
   "files": [
     "api/_lib/wholesaleCsv.mjs",
     "api/import-wholesale-csv.mjs",
-    "api/wholesale-debug.mjs",
-    "src/app/pages/EdicionHomePage.tsx",
-    ".gitignore",
-    "api/_lib/wholesale.mjs",
-    "api/checkout.mjs",
-    "api/wholesale-prices.mjs",
-    "package.json",
-    "scripts/sync-wholesale-pricing.mjs",
-    "scripts/test-wholesale.mjs",
-    "scripts/validate-menu-collections.mjs",
-    "src/app/context/CartContext.tsx",
-    "src/app/pages/CartPage.tsx",
-    "src/data/navigation-menu.ts",
-    "src/shopify/cart.ts",
-    "src/shopify/hooks/useShopifyCart.ts",
-    "src/shopify/queries.ts",
-    "src/shopify/types.ts",
-    "vercel.json",
-    "Meta_Descripciones_Bebify_Final.xlsx",
-    "WholesalePricingExport1781631508.csv",
-    "WholesalePricingExport1783371017.csv",
-    "WholesalePricingExport1784565459.csv",
-    "WholesalePricingExport1784935934.csv",
-    "WholesalePricingExport1785182943.csv",
-    "banner1-2.jpeg",
-    "banner1.jpeg",
-    "bebify - Verificacion Fotos.csv",
-    "docs/modulo-edicion-home-bebify.md",
-    "middleware.js",
-    "public/product-handle-redirects.json",
-    "public/robots.txt",
-    "public/sitemap.xml",
-    "scripts/batch-product-handles-seo.mjs",
-    "scripts/build-master-images-repair.mjs",
-    "scripts/check-hero-image-fallback.mjs",
-    "scripts/copy-hero-giffard.mjs",
-    "scripts/data/product-meta-tags.json",
-    "scripts/generate-sitemap.mjs",
-    "scripts/import-bebify-meta-xlsx.mjs",
-    "scripts/output/master-images-repair-blocked.csv",
-    "scripts/output/master-images-repair-build-report.md",
-    "scripts/output/master-images-repair-pilot.csv",
-    "scripts/output/master-images-repair.csv",
-    "scripts/output/odoo-batch11-targets.json",
-    "scripts/output/odoo-product-images-batch11-index.csv",
-    "scripts/output/odoo-product-images-batch11/AGM-OP-036.jpg",
-    "scripts/output/odoo-product-images-batch11/DLI-OP-047.webp",
-    "scripts/output/odoo-product-images-batch11/VBL-BA-028.jpg",
-    "scripts/output/odoo-product-images-batch11/VBL-BA-073.jpg",
-    "scripts/output/odoo-product-images-batch11/VBL-BA-077.jpg",
-    "scripts/output/odoo-product-images-batch11/VBL-OP-006.jpg",
-    "scripts/output/odoo-product-images-batch11/VRO-BA-001.jpg",
-    "scripts/output/odoo-product-images-batch11/VTI-BA-038.jpg",
-    "scripts/output/odoo-product-images-batch11/VTI-BA-115.jpg",
-    "scripts/output/odoo-product-images-batch11/VTI-BA-209.jpg",
-    "scripts/output/odoo-sku-id-map.json",
-    "scripts/output/odoo-skus-missing-in-odoo.json",
-    "scripts/output/odoo-skus-to-download.json",
-    "scripts/output/pilot-product-seo-report.md",
-    "scripts/output/plan-reparacion-fotos-bebify.md",
-    "scripts/output/product-handle-redirects.json",
-    "scripts/output/product-handles-seo-batch.csv",
-    "scripts/output/product-url-audit-report.md",
-    "scripts/output/product-url-redirects-report.md",
-    "scripts/output/products-with-screenshot-images.csv",
-    "scripts/output/repair-product-images-2026-07-17T20-27-18-667Z.json",
-    "scripts/output/repair-product-images-2026-07-17T20-27-37-171Z.json",
-    "scripts/output/repair-product-images-2026-07-20T12-53-08-388Z.json",
-    "scripts/output/repair-product-images-2026-07-20T12-56-00-084Z.json",
-    "scripts/output/repair-product-images-2026-07-20T14-34-48-084Z.json",
-    "scripts/output/repair-product-images-dry-run.log.md",
-    "scripts/output/repair-product-images-pilot.log.md",
-    "scripts/output/repair-product-images-pilot10.json",
-    "scripts/output/repair-product-images-pilot10.log.md",
-    "scripts/output/repair-product-images-to-103-residuals.csv",
-    "scripts/output/repair-product-images-to-103.json",
-    "scripts/output/repair-product-images-to-103.log.md",
-    "scripts/output/verificacion-fotos-cliente-report.md",
-    "scripts/output/verificacion-fotos-enriched.json",
-    "scripts/output/verificacion-fotos-repair-pilot10.csv",
-    "scripts/output/verificacion-fotos-repair-to-103.csv",
-    "scripts/output/verificacion_fotos_productos_bebify.csv",
-    "scripts/output/verificacion_fotos_productos_bebify.xlsx",
-    "scripts/output/verificacion_fotos_resumen.csv",
-    "scripts/output/verificacion_fotos_resumen.tsv",
-    "scripts/output/verificacion_fotos_verificacion_fotos.csv",
-    "scripts/output/verificacion_fotos_verificacion_fotos.tsv",
-    "scripts/pilot-product-seo.mjs",
-    "scripts/repair-product-images.mjs",
-    "scripts/sync-product-redirects-to-vercel.mjs",
-    "src/app/components/WholesalePricingExport1785182943.csv",
-    "trabajo.md",
-    "api/_lib/http.mjs"
+    "api/set-wholesale-group.mjs",
+    "src/app/pages/EdicionHomePage.tsx"
   ],
-  "acceptance": "Subir un CSV de Samita en /edicion actualiza el snapshot y Blob (merge, no borra Kauri); Cheve entra con sus precios; el cliente ve el descuento en el carrito."
+  "acceptance": "El import CSV con reglas value=0 devuelve mensaje explícito (cheve: precio 0/vacío, N productos). El endpoint manual + UI publican {tag, price, productIds} al Blob y el cliente con ese tag ve el descuento."
 }

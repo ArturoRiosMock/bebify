@@ -46,12 +46,17 @@ export default async function importWholesaleCsv(req, res) {
   const mode = body.mode === 'replace' ? 'replace' : 'merge';
 
   try {
-    const { groups: parsedGroups } = parseWholesaleCsv(csvText);
+    const { groups: parsedGroups, skippedRules } = parseWholesaleCsv(csvText);
     const parsedTagCount = Object.keys(parsedGroups).length;
     if (parsedTagCount === 0) {
+      const detail = skippedRules
+        .map((r) => `${r.name} (${r.productIds.length} productos)`)
+        .join(', ');
       res.status(422).json({
-        error:
-          'El CSV no contiene ningún grupo con precios fixed-amount. Verifica que el export sea de Samita y que las reglas estén activas.',
+        error: skippedRules.length
+          ? `El CSV trae reglas activas pero todas exportadas con precio 0/vacío: ${detail}. Guardá el "Fixed amount" en Samita y volvé a exportar, o usá la entrada manual.`
+          : 'El CSV no contiene ningún grupo con precios fixed-amount. Verifica que el export sea de Samita y que las reglas estén activas.',
+        skippedRules,
       });
       return;
     }
@@ -93,6 +98,7 @@ export default async function importWholesaleCsv(req, res) {
       mode,
       importedGroups: snapshot._importedGroups,
       preservedFromBlob: snapshot._preservedFromBlob,
+      skippedRules,
       ...stats,
       note: 'Precios live en Blob. Cache API ~45s. Merge conserva los grupos que ya estaban.',
     });
