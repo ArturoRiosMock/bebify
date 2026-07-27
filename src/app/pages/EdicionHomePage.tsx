@@ -13,6 +13,8 @@ import {
   Link2,
   Plus,
   RefreshCw,
+  FileSpreadsheet,
+  Search,
 } from 'lucide-react';
 import type { HeroSlide, HomeContent } from '@/types/homeContent';
 import homeContentDefault from '@/data/home-content.json';
@@ -300,6 +302,19 @@ export const EdicionHomePage: React.FC = () => {
   const [saveMessage, setSaveMessage] = useState('');
   const [syncingWholesale, setSyncingWholesale] = useState(false);
   const [wholesaleMessage, setWholesaleMessage] = useState('');
+  const [importingCsv, setImportingCsv] = useState(false);
+  const [debugEmail, setDebugEmail] = useState('');
+  const [debuggingCustomer, setDebuggingCustomer] = useState(false);
+  const [debugResult, setDebugResult] = useState<null | {
+    ok: boolean;
+    email: string;
+    wholesale: boolean;
+    matchedTags: string[];
+    productsInMatched: number;
+    customer: { firstName?: string; lastName?: string; tags: string[] } | null;
+    snapshot: { tagCount: number; tags: string[]; generatedAt?: string; generatedFrom?: string };
+  }>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [uploadsInFlight, setUploadsInFlight] = useState(0);
   const hydratedRef = useRef(false);
   const contentRef = useRef(content);
@@ -386,6 +401,82 @@ export const EdicionHomePage: React.FC = () => {
       setSaveMessage(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleImportCsv = async (file: File | undefined) => {
+    if (!file) return;
+    setImportingCsv(true);
+    setWholesaleMessage('');
+    try {
+      const creds = getEdicionCredentials();
+      if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+      const csv = await file.text();
+      const res = await fetch('/api/import-wholesale-csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: creds.username,
+          password: creds.password,
+          csv,
+          fileName: file.name,
+          mode: 'merge',
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        tagCount?: number;
+        productCount?: number;
+        importedGroups?: string[];
+        preservedFromBlob?: string[];
+      };
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo importar el CSV.');
+      }
+      const imported = (data.importedGroups ?? []).slice(0, 8);
+      const preserved = (data.preservedFromBlob ?? []).slice(0, 6);
+      let msg = `CSV importado: ${data.tagCount ?? 0} grupos totales, ${data.productCount ?? 0} productos. Los usuarios lo ven en ~1 minuto.`;
+      if (imported.length) {
+        msg += ` Importados: ${imported.join(', ')}${(data.importedGroups?.length ?? 0) > imported.length ? '…' : ''}.`;
+      }
+      if (preserved.length) {
+        msg += ` Conservados (no venían en el CSV): ${preserved.join(', ')}${(data.preservedFromBlob?.length ?? 0) > preserved.length ? '…' : ''}.`;
+      }
+      setWholesaleMessage(msg);
+    } catch (err) {
+      setWholesaleMessage(err instanceof Error ? err.message : 'Error al importar el CSV');
+    } finally {
+      setImportingCsv(false);
+      if (csvInputRef.current) csvInputRef.current.value = '';
+    }
+  };
+
+  const handleDebugCustomer = async () => {
+    const email = debugEmail.trim();
+    if (!email) return;
+    setDebuggingCustomer(true);
+    setDebugResult(null);
+    try {
+      const creds = getEdicionCredentials();
+      if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+      const res = await fetch('/api/wholesale-debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: creds.username,
+          password: creds.password,
+          email,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo consultar.');
+      }
+      setDebugResult(data);
+    } catch (err) {
+      setWholesaleMessage(err instanceof Error ? err.message : 'Error al consultar cliente');
+    } finally {
+      setDebuggingCustomer(false);
     }
   };
 
@@ -541,25 +632,114 @@ export const EdicionHomePage: React.FC = () => {
               {section}
             </button>
           ))}
-          <div className="mt-2 md:mt-4 p-3 bg-white rounded-lg border border-gray-200 space-y-2 shrink-0 min-w-[12rem]">
-            <p className="text-xs font-semibold text-gray-700">Precios mayoreo</p>
-            <p className="text-[11px] text-gray-500 leading-snug">
-              Después de cambiar descuentos en Samita, sincronizá acá. Los usuarios los ven en ~1
-              minuto (sin redeploy).
-            </p>
+          <div className="mt-2 md:mt-4 p-3 bg-white rounded-lg border border-gray-200 space-y-3 shrink-0 min-w-[12rem]">
+            <div>
+              <p className="text-xs font-semibold text-gray-700">Precios mayoreo</p>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Después de cambiar descuentos en Samita, actualizá acá. Los usuarios los ven en ~1
+                minuto (sin redeploy).
+              </p>
+            </div>
             <button
               type="button"
               onClick={handleSyncWholesale}
-              disabled={syncingWholesale}
+              disabled={syncingWholesale || importingCsv}
               className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0055a2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004488] disabled:opacity-60"
+              title="Descarga las reglas activas desde la API de Samita y publica el snapshot."
             >
               {syncingWholesale ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <RefreshCw className="w-3.5 h-3.5" />
               )}
-              {syncingWholesale ? 'Sincronizando…' : 'Actualizar precios'}
+              {syncingWholesale ? 'Sincronizando…' : 'Sync desde API'}
             </button>
+            <div className="border-t border-gray-100 pt-2 space-y-2">
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Si la API de Samita no trae precios nuevos, subí el CSV export (Samita → Export
+                Discount Groups). Se hace merge, no borra grupos existentes.
+              </p>
+              <button
+                type="button"
+                onClick={() => csvInputRef.current?.click()}
+                disabled={importingCsv || syncingWholesale}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#0055a2] px-3 py-2 text-xs font-semibold text-[#0055a2] hover:bg-blue-50 disabled:opacity-60"
+              >
+                {importingCsv ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                )}
+                {importingCsv ? 'Importando…' : 'Importar CSV Samita'}
+              </button>
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={(e) => void handleImportCsv(e.target.files?.[0])}
+              />
+            </div>
+            <div className="border-t border-gray-100 pt-2 space-y-2">
+              <p className="text-[11px] font-semibold text-gray-700">Diagnóstico cliente</p>
+              <input
+                type="email"
+                value={debugEmail}
+                onChange={(e) => setDebugEmail(e.target.value)}
+                placeholder="email del cliente"
+                className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#0055a2]"
+              />
+              <button
+                type="button"
+                onClick={handleDebugCustomer}
+                disabled={debuggingCustomer || !debugEmail.trim()}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+              >
+                {debuggingCustomer ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Search className="w-3.5 h-3.5" />
+                )}
+                {debuggingCustomer ? 'Consultando…' : 'Ver tags / grupos'}
+              </button>
+              {debugResult && (
+                <div className="text-[11px] text-gray-600 leading-snug bg-gray-50 rounded-md p-2 space-y-1">
+                  {debugResult.customer ? (
+                    <>
+                      <p>
+                        <span className="font-semibold">Cliente:</span>{' '}
+                        {debugResult.customer.firstName} {debugResult.customer.lastName}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Tags:</span>{' '}
+                        {debugResult.customer.tags.length
+                          ? debugResult.customer.tags.join(', ')
+                          : '(sin tags)'}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Mayoreo:</span>{' '}
+                        {debugResult.wholesale ? (
+                          <span className="text-green-700">
+                            sí — {debugResult.matchedTags.join(', ')} (
+                            {debugResult.productsInMatched} productos)
+                          </span>
+                        ) : (
+                          <span className="text-red-700">
+                            no — ninguno de sus tags coincide con un grupo del snapshot
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        Snapshot: {debugResult.snapshot.tagCount} grupos,{' '}
+                        {debugResult.snapshot.generatedAt?.slice(0, 16).replace('T', ' ')}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-red-700">Cliente no encontrado en Shopify.</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </nav>
 
