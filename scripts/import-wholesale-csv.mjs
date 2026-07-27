@@ -83,25 +83,32 @@ for (let i = 1; i < lines.length; i += 1) {
 
   if (!ruleActive || !currentTag) continue;
 
-  const productId = row[COL.productId]?.trim();
-  if (!productId) continue;
+  const productIdsRaw = row[COL.productId]?.trim();
+  if (!productIdsRaw) continue;
 
   const discountType = row[COL.discountType]?.trim().toLowerCase();
   if (discountType !== 'fixed-amount') continue;
 
-  // Samita exporta el precio fijo siempre en la primera columna de tag (ADEP),
-  // no en la columna que coincide con el Customer Tag de la regla.
-  let price = null;
-  for (let c = TAG_START; c < row.length; c += 1) {
-    const n = parseFloat(String(row[c] ?? '').replace(',', '.'));
-    if (Number.isFinite(n) && n > 0) {
-      price = n;
-      break;
+  const parsePrice = (value) => {
+    const n = parseFloat(String(value ?? '').replace(',', '.'));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+
+  // Preferir la columna cuyo header coincide con el Customer Tag de la regla.
+  let price = parsePrice(row[header.indexOf(currentTag)]);
+  // Fallback: primera columna con precio (formato legacy de Samita).
+  if (price == null) {
+    for (let c = TAG_START; c < row.length; c += 1) {
+      price = parsePrice(row[c]);
+      if (price != null) break;
     }
   }
   if (price == null) continue;
 
-  addPrice(currentTag, productId, price);
+  // Samita a veces pone varios Product Ids en una sola celda ("id1,id2,...").
+  for (const productId of productIdsRaw.split(',')) {
+    addPrice(currentTag, productId, price);
+  }
 }
 
 const sortedGroups = {};

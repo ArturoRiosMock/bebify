@@ -1,0 +1,63 @@
+# Sincroniza precios B2B desde Samita → api/_data/wholesale-pricing.json → push a main
+# (Vercel redeploya solo). No requiere export CSV manual.
+#
+# Secrets requeridos (una sola vez en GitHub → Settings → Secrets):
+#   SAMITA_API_KEY  — Samita Wholesale → Settings → Public API (permiso View)
+#
+# Límite Samita: ~1 request / 5 min. Un sync completo puede tardar >30 min.
+name: Sync wholesale pricing
+
+on:
+  schedule:
+    # 11:00 UTC ≈ 08:00 Argentina
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-wholesale-pricing
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Require SAMITA_API_KEY
+        env:
+          SAMITA_API_KEY: ${{ secrets.SAMITA_API_KEY }}
+        run: |
+          if [ -z "$SAMITA_API_KEY" ]; then
+            echo "::error::Falta el secret SAMITA_API_KEY. Créalo en Samita (Public API) y añádelo en GitHub → Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Sync pricing from Samita
+        env:
+          SAMITA_API_KEY: ${{ secrets.SAMITA_API_KEY }}
+          SAMITA_SHOP_URL: mr-brown-mayoreo.myshopify.com
+        run: node scripts/sync-wholesale-pricing.mjs
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "bebify-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/_data/wholesale-pricing.json
+          if git diff --staged --quiet; then
+            echo "Sin cambios en wholesale-pricing.json"
+            exit 0
+          fi
+          git commit -m "chore: sync precios mayoreo desde Samita API"
+          git push
