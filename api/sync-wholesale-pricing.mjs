@@ -59,7 +59,7 @@ export default async function syncWholesalePricing(req, res) {
 
     const snapshot = await buildWholesaleSnapshot({
       limit: 20,
-      maxPages: 5,
+      maxPages: 6,
       rateLimitMs: null,
       maxRetries: 1,
     });
@@ -73,7 +73,9 @@ export default async function syncWholesalePricing(req, res) {
       url,
       generatedAt: snapshot._generatedAt,
       ...stats,
-      note: 'Precios live en Blob. Cache API ~45s. Si faltan reglas, workflow GitHub (sync completo).',
+      skippedEmpty: snapshot._skippedEmpty || [],
+      mergedFromBlob: snapshot._mergedFromBlob || [],
+      note: 'Precios live en Blob. Cache API ~45s. Reglas sin precio en Samita no se importan (salvo merge del Blob previo).',
     });
   } catch (err) {
     console.error('[sync-wholesale-pricing]', err);

@@ -87,8 +87,9 @@ async function fetchPage({ apiKey, shopUrl, page, limit, rateLimitMs, maxRetries
   url.searchParams.set('limit', String(limit));
   // Sin filtro status: el 27/07 Samita empezó a devolver SOLO 5 reglas
   // desactivadas con status=active (filtro roto server-side); sin el
-  // parámetro devuelve las 47 reglas reales, igual que el snapshot bueno.
-  url.searchParams.set('sort', 'descrease');
+  // parámetro devuelve las reglas reales.
+  // Sin sort: Samita devuelve primero las más recientes (cheve, Kauri, …).
+  // sort=descrease NO ordena por fecha y enterraba reglas nuevas al final.
 
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     const res = await fetch(url, {
@@ -172,8 +173,36 @@ export async function buildWholesaleSnapshot(opts = {}) {
   }
 
   const groups = {};
+  const emptyTags = [];
   for (const rule of rules) {
+    const tags = customerTags(rule).filter((t) => t !== '*');
+    const beforeCounts = Object.fromEntries(tags.map((t) => [t, Object.keys(groups[t] || {}).length]));
     extractPricesFromRule(rule, groups);
+    const entries = rule.discount_for_variants ?? rule.products ?? [];
+    if (!tags.length || !entries.length) continue;
+    const gotPrice = tags.some(
+      (t) => Object.keys(groups[t] || {}).length > (beforeCounts[t] || 0),
+    );
+    if (!gotPrice) {
+      for (const t of tags) emptyTags.push(t);
+    }
+  }
+
+  const skippedEmpty = [...new Set(emptyTags)];
+  const mergedFromBlob = [];
+
+  // Si Samita trae la regla pero sin precios (percent:null / value vacío),
+  // conservar el grupo previo del Blob (ej. Kauri cargado a mano).
+  if (skippedEmpty.length) {
+    const previous = await fetchWholesaleSnapshotFromBlob().catch(() => null);
+    for (const tag of skippedEmpty) {
+      if (groups[tag]) continue;
+      const prevGroup = previous?.groups?.[tag];
+      if (prevGroup && Object.keys(prevGroup).length > 0) {
+        groups[tag] = { ...prevGroup };
+        mergedFromBlob.push(tag);
+      }
+    }
   }
 
   // Nunca devolver un snapshot vacío: el 27/07 un sync con parsing roto
@@ -191,6 +220,8 @@ export async function buildWholesaleSnapshot(opts = {}) {
     _generatedAt: new Date().toISOString(),
     _shop: shopUrl,
     _ruleCount: rules.length,
+    _skippedEmpty: skippedEmpty.filter((t) => !mergedFromBlob.includes(t)),
+    _mergedFromBlob: mergedFromBlob,
     groups,
   };
 }
@@ -230,20 +261,26 @@ export async function publishWholesaleSnapshotToBlob(snapshot, { allowShrink = f
     console.warn('[samitaWholesale] blob del skipped:', err?.message || err);
   }
 
+  // TTL corto: la URL pública de Blob cachea hasta 30 días y un sync
+  // nuevo no se veía (Kauri/cheve quedaban invisibles tras publicar).
   const blob = await put(WHOLESALE_BLOB_PATHNAME, `${JSON.stringify(snapshot)}\n`, {
     access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
+    cacheControlMaxAge: 60,
     token,
   });
 
-  return blob.url;
+  return blob.downloadUrl || blob.url;
 }
 
 export async function fetchWholesaleSnapshotFromBlob() {
   const directUrl = process.env.WHOLESALE_PRICING_BLOB_URL?.trim();
   if (directUrl) {
-    const res = await fetch(directUrl, { cache: 'no-store' });
+    const url = directUrl.includes('download=1')
+      ? directUrl
+      : `${directUrl}${directUrl.includes('?') ? '&' : '?'}download=1`;
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return null;
     return res.json();
   }
@@ -256,7 +293,8 @@ export async function fetchWholesaleSnapshotFromBlob() {
     limit: 1,
     token,
   });
-  const url = blobs[0]?.url;
+  // downloadUrl evita el CDN stale de la URL pública (max-age=30d).
+  const url = blobs[0]?.downloadUrl || blobs[0]?.url;
   if (!url) return null;
 
   const res = await fetch(url, { cache: 'no-store' });

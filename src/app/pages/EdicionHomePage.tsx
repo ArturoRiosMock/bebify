@@ -12,6 +12,7 @@ import {
   Trash2,
   Link2,
   Plus,
+  RefreshCw,
 } from 'lucide-react';
 import type { HeroSlide, HomeContent } from '@/types/homeContent';
 import homeContentDefault from '@/data/home-content.json';
@@ -297,6 +298,8 @@ export const EdicionHomePage: React.FC = () => {
   const [content, setContent] = useState<HomeContent>(homeContentDefault as HomeContent);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [syncingWholesale, setSyncingWholesale] = useState(false);
+  const [wholesaleMessage, setWholesaleMessage] = useState('');
   const [uploadsInFlight, setUploadsInFlight] = useState(0);
   const hydratedRef = useRef(false);
   const contentRef = useRef(content);
@@ -386,6 +389,49 @@ export const EdicionHomePage: React.FC = () => {
     }
   };
 
+  const handleSyncWholesale = async () => {
+    setSyncingWholesale(true);
+    setWholesaleMessage('');
+    try {
+      const creds = getEdicionCredentials();
+      if (!creds) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+      const res = await fetch('/api/sync-wholesale-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: creds.username, password: creds.password }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        tagCount?: number;
+        productCount?: number;
+        skippedEmpty?: string[];
+        mergedFromBlob?: string[];
+      };
+      if (!res.ok) {
+        if (res.status === 429) {
+          throw new Error(
+            'Samita está limitando requests. Esperá ~5 minutos e intentá de nuevo.',
+          );
+        }
+        throw new Error(data.error || 'No se pudieron sincronizar los precios');
+      }
+      const skipped = (data.skippedEmpty ?? []).filter(Boolean);
+      const merged = (data.mergedFromBlob ?? []).filter(Boolean);
+      let msg = `Precios mayoreo actualizados (${data.tagCount ?? 0} grupos, ${data.productCount ?? 0} productos). Los usuarios los ven en ~1 minuto.`;
+      if (skipped.length) {
+        msg += ` Sin precios en Samita (no importados): ${skipped.join(', ')}. Cargá fixed-amount por producto y volvé a sincronizar.`;
+      }
+      if (merged.length) {
+        msg += ` Se conservaron del Blob: ${merged.join(', ')}.`;
+      }
+      setWholesaleMessage(msg);
+    } catch (err) {
+      setWholesaleMessage(err instanceof Error ? err.message : 'Error al sincronizar');
+    } finally {
+      setSyncingWholesale(false);
+    }
+  };
+
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -467,6 +513,17 @@ export const EdicionHomePage: React.FC = () => {
           {saveMessage}
         </div>
       )}
+      {wholesaleMessage && (
+        <div
+          className={`px-4 py-2 text-sm text-center ${
+            wholesaleMessage.includes('actualizados')
+              ? 'bg-green-100 text-green-800'
+              : 'bg-amber-100 text-amber-900'
+          }`}
+        >
+          {wholesaleMessage}
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row max-w-6xl mx-auto p-4 gap-4">
         <nav className="md:w-48 shrink-0 flex md:flex-col gap-2 overflow-x-auto">
@@ -484,6 +541,26 @@ export const EdicionHomePage: React.FC = () => {
               {section}
             </button>
           ))}
+          <div className="mt-2 md:mt-4 p-3 bg-white rounded-lg border border-gray-200 space-y-2 shrink-0 min-w-[12rem]">
+            <p className="text-xs font-semibold text-gray-700">Precios mayoreo</p>
+            <p className="text-[11px] text-gray-500 leading-snug">
+              Después de cambiar descuentos en Samita, sincronizá acá. Los usuarios los ven en ~1
+              minuto (sin redeploy).
+            </p>
+            <button
+              type="button"
+              onClick={handleSyncWholesale}
+              disabled={syncingWholesale}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0055a2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004488] disabled:opacity-60"
+            >
+              {syncingWholesale ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
+              {syncingWholesale ? 'Sincronizando…' : 'Actualizar precios'}
+            </button>
+          </div>
         </nav>
 
         <main className="flex-1 bg-white rounded-xl shadow-sm p-6 space-y-5">
