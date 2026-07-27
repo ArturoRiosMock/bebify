@@ -205,7 +205,14 @@ export async function publishWholesaleSnapshotToBlob(snapshot, { allowShrink = f
   // es casi seguro un problema de API (como el filtro status roto del 27/07)
   // y no un cambio real del cliente. Abortar antes de pisar producción.
   if (!allowShrink) {
-    const current = await fetchWholesaleSnapshotFromBlob().catch(() => null);
+    // Fail-open a propósito: si no se puede leer el Blob actual, el guard
+    // no debe bloquear la publicación, pero el motivo queda logueado.
+    let current = null;
+    try {
+      current = await fetchWholesaleSnapshotFromBlob();
+    } catch (err) {
+      console.warn('[samitaWholesale] guard sin snapshot actual:', err?.message || err);
+    }
     const currentCount = Object.keys(current?.groups || {}).length;
     const newCount = Object.keys(snapshot?.groups || {}).length;
     if (currentCount >= 4 && newCount < currentCount / 2) {
