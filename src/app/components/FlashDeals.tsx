@@ -18,7 +18,10 @@ function FlashDealCard({ deal }: { deal: DealProduct }) {
     ? Math.round(((deal.originalPrice! - deal.price) / deal.originalPrice!) * 100)
     : 0;
 
+  const isSoldOut = deal.availableForSale === false;
+
   const handleAddToCart = () => {
+    if (isSoldOut) return;
     addToCart(
       {
         id: deal.id,
@@ -32,6 +35,7 @@ function FlashDealCard({ deal }: { deal: DealProduct }) {
         shopifyId: deal.shopifyId,
         handle: deal.handle,
         cantidadLabel: deal.cantidadLabel,
+        availableForSale: deal.availableForSale,
       },
       quantity
     );
@@ -96,40 +100,47 @@ function FlashDealCard({ deal }: { deal: DealProduct }) {
         </p>
       )}
 
-      <div className="flex items-center justify-center gap-1 md:gap-1.5 mb-1.5 md:mb-2">
-        <button
-          type="button"
-          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-          className="w-7 h-7 md:w-8 md:h-8 shrink-0 flex items-center justify-center border border-[#0c3c1f] text-[#0c3c1f] rounded hover:bg-[#0c3c1f] hover:text-white transition-colors"
-          aria-label="Reducir cantidad"
-        >
-          <Minus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        </button>
-        <input
-          type="number"
-          min={1}
-          value={quantity}
-          onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-          className="w-9 md:w-11 h-7 md:h-8 text-center border border-gray-300 rounded text-[#212121] text-xs md:text-sm font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          aria-label="Cantidad a agregar"
-        />
-        <button
-          type="button"
-          onClick={() => setQuantity((q) => q + 1)}
-          className="w-7 h-7 md:w-8 md:h-8 shrink-0 flex items-center justify-center border border-[#0c3c1f] text-[#0c3c1f] rounded hover:bg-[#0c3c1f] hover:text-white transition-colors"
-          aria-label="Aumentar cantidad"
-        >
-          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        </button>
-      </div>
+      {!isSoldOut && (
+        <div className="flex items-center justify-center gap-1 md:gap-1.5 mb-1.5 md:mb-2">
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+            className="w-7 h-7 md:w-8 md:h-8 shrink-0 flex items-center justify-center border border-[#0c3c1f] text-[#0c3c1f] rounded hover:bg-[#0c3c1f] hover:text-white transition-colors"
+            aria-label="Reducir cantidad"
+          >
+            <Minus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+          </button>
+          <input
+            type="number"
+            min={1}
+            value={quantity}
+            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+            className="w-9 md:w-11 h-7 md:h-8 text-center border border-gray-300 rounded text-[#212121] text-xs md:text-sm font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            aria-label="Cantidad a agregar"
+          />
+          <button
+            type="button"
+            onClick={() => setQuantity((q) => q + 1)}
+            className="w-7 h-7 md:w-8 md:h-8 shrink-0 flex items-center justify-center border border-[#0c3c1f] text-[#0c3c1f] rounded hover:bg-[#0c3c1f] hover:text-white transition-colors"
+            aria-label="Aumentar cantidad"
+          >
+            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+          </button>
+        </div>
+      )}
 
       <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={isSoldOut ? undefined : { scale: 1.05 }}
+        whileTap={isSoldOut ? undefined : { scale: 0.95 }}
         onClick={handleAddToCart}
-        className="w-full bg-[#0c3c1f] text-white py-1.5 md:py-2 px-2 md:px-4 rounded-lg hover:bg-[#0c3c1f]/90 transition-colors text-[10px] md:text-sm font-medium"
+        disabled={isSoldOut}
+        className={`w-full py-1.5 md:py-2 px-2 md:px-4 rounded-lg transition-colors text-[10px] md:text-sm font-medium ${
+          isSoldOut
+            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+            : 'bg-[#0c3c1f] text-white hover:bg-[#0c3c1f]/90'
+        }`}
       >
-        Agregar
+        {isSoldOut ? 'Agotado' : 'Agregar'}
       </motion.button>
     </motion.div>
   );

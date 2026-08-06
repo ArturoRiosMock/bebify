@@ -40,16 +40,6 @@
         "buttonText": "COTIZA AHORA",
         "buttonHref": "/cotizar-evento",
         "imageOnly": true
-      },
-      {
-        "imageMobile": "/movil_mundial.png",
-        "imageDesktop": "/cta.jpg",
-        "title": "",
-        "subtitle": "",
-        "badge": "",
-        "buttonText": "VER PROMO-MUNDIALISTA",
-        "buttonHref": "/categorias/promo-mundialista",
-        "imageOnly": true
       }
     ]
   },

@@ -16,6 +16,7 @@ export const WishlistDrawer: React.FC<WishlistDrawerProps> = ({ isOpen, onClose 
   const navigate = useNavigate();
 
   const handleAddToCart = (item: typeof items[number]) => {
+    if (item.availableForSale === false) return;
     addToCart({
       id: typeof item.id === 'string' ? parseInt(item.id) || 0 : item.id,
       name: item.name,
@@ -25,6 +26,7 @@ export const WishlistDrawer: React.FC<WishlistDrawerProps> = ({ isOpen, onClose 
       category: item.category || '',
       description: '',
       variantId: item.variantId,
+      availableForSale: item.availableForSale,
     });
   };
 
@@ -107,10 +109,15 @@ export const WishlistDrawer: React.FC<WishlistDrawerProps> = ({ isOpen, onClose 
                         <div className="flex items-center gap-2 mt-2">
                           <button
                             onClick={() => handleAddToCart(item)}
-                            className="flex items-center gap-1 bg-[#0c3c1f] text-white px-3 py-1 rounded text-xs font-medium hover:bg-[#0a3019] transition-colors"
+                            disabled={item.availableForSale === false}
+                            className={`flex items-center gap-1 px-3 py-1 rounded text-xs font-medium transition-colors ${
+                              item.availableForSale === false
+                                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                : 'bg-[#0c3c1f] text-white hover:bg-[#0a3019]'
+                            }`}
                           >
                             <ShoppingCart className="w-3 h-3" />
-                            Agregar
+                            {item.availableForSale === false ? 'Agotado' : 'Agregar'}
                           </button>
                           <button
                             onClick={() => removeItem(item.id)}
@@ -132,7 +139,9 @@ export const WishlistDrawer: React.FC<WishlistDrawerProps> = ({ isOpen, onClose 
               <div className="p-4 border-t space-y-2">
                 <button
                   onClick={() => {
-                    for (const item of items) handleAddToCart(item);
+                    for (const item of items) {
+                      if (item.availableForSale !== false) handleAddToCart(item);
+                    }
                     onClose();
                   }}
                   className="w-full bg-[#0c3c1f] text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-[#0a3019] transition-colors"

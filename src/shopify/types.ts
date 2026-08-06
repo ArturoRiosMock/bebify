@@ -208,4 +208,6 @@ export interface Product {
   seoTitle?: string;
   /** Meta description de Shopify Admin (seo.description), si está definida */
   seoDescription?: string;
+  /** false cuando ninguna variante está disponible para venta (agotado) */
+  availableForSale?: boolean;
 }

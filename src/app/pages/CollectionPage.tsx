@@ -99,6 +99,7 @@ export const CollectionPage: React.FC = () => {
     else if (sortBy === 'price-desc') sorted.sort((a, b) => b.price - a.price);
     else if (sortBy === 'name-asc') sorted.sort((a, b) => a.name.localeCompare(b.name, 'es'));
     else if (sortBy === 'name-desc') sorted.sort((a, b) => b.name.localeCompare(a.name, 'es'));
+    sorted.sort((a, b) => Number(a.availableForSale === false) - Number(b.availableForSale === false));
 
     return sorted;
   }, [products, sortBy, vendorFilter, discountOnly, activeTag]);

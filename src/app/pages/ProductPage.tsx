@@ -117,7 +117,11 @@ export const ProductPage: React.FC = () => {
     ogType: 'product',
     priceAmount: product?.price,
     priceCurrency: 'MXN',
-    availability: product ? 'in stock' : undefined,
+    availability: product
+      ? product.availableForSale === false
+        ? 'out of stock'
+        : 'in stock'
+      : undefined,
   });
 
   if (loading) {

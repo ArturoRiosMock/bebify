@@ -9,6 +9,7 @@ export interface WishlistItem {
   category?: string;
   handle?: string;
   variantId?: string;
+  availableForSale?: boolean;
 }
 
 interface WishlistContextType {

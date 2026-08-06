@@ -25,6 +25,8 @@ export interface Product {
   beverageType?: string;
   /** País / región de origen (NOM-142-SSA1/SCFI-2014) */
   origin?: string;
+  /** false = agotado; no se puede agregar al carrito */
+  availableForSale?: boolean;
 }
 
 export interface CartItem extends Omit<Product, 'id'> {
@@ -81,6 +83,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   }, [isShopify, shopify.cart, localCartItems]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
+    if (product.availableForSale === false) return;
+
     window.dispatchEvent(new CustomEvent('cart:item-added', {
       detail: { name: product.name, image: product.image, price: product.price }
     }));

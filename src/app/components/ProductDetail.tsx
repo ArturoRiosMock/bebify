@@ -27,6 +27,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
   const [showStickyBar, setShowStickyBar] = useState(false);
 
   const isFavorite = isInWishlist(product.id);
+  const isSoldOut = product.availableForSale === false;
   const handleToggleFavorite = () => {
     toggleItem({
       id: product.id,
@@ -37,6 +38,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
       category: product.category,
       handle: product.handle,
       variantId: product.variantId,
+      availableForSale: product.availableForSale,
     });
   };
   const ctaRef = useRef<HTMLDivElement>(null);
@@ -70,6 +72,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
   };
 
   const handleAddToCart = () => {
+    if (isSoldOut) return;
     addToCart(
       {
         id: product.id,
@@ -83,6 +86,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
         shopifyId: product.shopifyId,
         handle: product.handle,
         cantidadLabel: product.cantidadLabel,
+        availableForSale: product.availableForSale,
       },
       quantity
     );
@@ -201,12 +205,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
               </div>
             </div>
 
+            {isSoldOut && (
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#717182]">Agotado</p>
+            )}
             <div ref={ctaRef} className="flex gap-2 mb-3">
               <div className="flex items-center border border-gray-300 rounded-lg shrink-0">
                 <button
                   onClick={() => handleQuantityChange(-1)}
-                  className="p-2 hover:bg-gray-50"
-                  disabled={quantity <= 1}
+                  className="p-2 hover:bg-gray-50 disabled:opacity-40"
+                  disabled={isSoldOut || quantity <= 1}
                   aria-label="Disminuir cantidad"
                 >
                   <Minus className="w-4 h-4" aria-hidden />
@@ -220,8 +227,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
                 />
                 <button
                   onClick={() => handleQuantityChange(1)}
-                  className="p-2 hover:bg-gray-50"
-                  disabled={quantity >= 99}
+                  className="p-2 hover:bg-gray-50 disabled:opacity-40"
+                  disabled={isSoldOut || quantity >= 99}
                   aria-label="Aumentar cantidad"
                 >
                   <Plus className="w-4 h-4" aria-hidden />
@@ -229,10 +236,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
               </div>
               <button
                 onClick={handleAddToCart}
-                className="flex-1 bg-[rgb(12,60,31)] text-white py-2.5 px-4 rounded-lg hover:bg-green-600 transition-colors font-bold text-sm flex items-center justify-center gap-2"
+                disabled={isSoldOut}
+                className={`flex-1 py-2.5 px-4 rounded-lg transition-colors font-bold text-sm flex items-center justify-center gap-2 ${
+                  isSoldOut
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-[rgb(12,60,31)] text-white hover:bg-green-600'
+                }`}
               >
                 <ShoppingCart className="w-5 h-5" />
-                COMPRAR
+                {isSoldOut ? 'AGOTADO' : 'COMPRAR'}
               </button>
             </div>
 
@@ -368,12 +380,12 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
                 )}
               </div>
 
-              <div ref={ctaRef} className="flex gap-3">
+              <div className="flex gap-3">
                 <div className="flex items-center border border-gray-300 rounded-lg shrink-0">
                   <button
                     onClick={() => handleQuantityChange(-1)}
-                    className="p-3 hover:bg-gray-50 transition-colors"
-                    disabled={quantity <= 1}
+                    className="p-3 hover:bg-gray-50 transition-colors disabled:opacity-40"
+                    disabled={isSoldOut || quantity <= 1}
                     aria-label="Disminuir cantidad"
                   >
                     <Minus className="w-4 h-4" aria-hidden />
@@ -387,8 +399,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
                   />
                   <button
                     onClick={() => handleQuantityChange(1)}
-                    className="p-3 hover:bg-gray-50 transition-colors"
-                    disabled={quantity >= 99}
+                    className="p-3 hover:bg-gray-50 transition-colors disabled:opacity-40"
+                    disabled={isSoldOut || quantity >= 99}
                     aria-label="Aumentar cantidad"
                   >
                     <Plus className="w-4 h-4" aria-hidden />
@@ -396,12 +408,20 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
                 </div>
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 bg-[rgb(12,60,31)] text-white py-3 px-6 rounded-lg hover:bg-green-600 transition-colors font-bold text-lg flex items-center justify-center gap-2"
+                  disabled={isSoldOut}
+                  className={`flex-1 py-3 px-6 rounded-lg transition-colors font-bold text-lg flex items-center justify-center gap-2 ${
+                    isSoldOut
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                      : 'bg-[rgb(12,60,31)] text-white hover:bg-green-600'
+                  }`}
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  COMPRAR
+                  {isSoldOut ? 'AGOTADO' : 'COMPRAR'}
                 </button>
               </div>
+              {isSoldOut && (
+                <p className="mt-2 text-sm font-semibold text-[#717182]">Este producto está agotado por el momento.</p>
+              )}
             </div>
           </div>
         </div>
@@ -639,20 +659,25 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, allProduc
             <span className="text-lg font-bold text-[#0c3c1f]">${product.price.toFixed(2)}</span>
           </div>
           <div className="flex items-center border border-gray-300 rounded-lg shrink-0">
-            <button onClick={() => handleQuantityChange(-1)} className="p-1.5 hover:bg-gray-50" disabled={quantity <= 1}>
+            <button onClick={() => handleQuantityChange(-1)} className="p-1.5 hover:bg-gray-50 disabled:opacity-40" disabled={isSoldOut || quantity <= 1}>
               <Minus className="w-3.5 h-3.5" />
             </button>
             <span className="w-8 text-center text-sm font-medium">{quantity}</span>
-            <button onClick={() => handleQuantityChange(1)} className="p-1.5 hover:bg-gray-50" disabled={quantity >= 99}>
+            <button onClick={() => handleQuantityChange(1)} className="p-1.5 hover:bg-gray-50 disabled:opacity-40" disabled={isSoldOut || quantity >= 99}>
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
           <button
             onClick={handleAddToCart}
-            className="bg-[rgb(12,60,31)] text-white py-2.5 px-5 rounded-lg hover:bg-green-600 transition-colors font-bold text-sm flex items-center gap-1.5 shrink-0"
+            disabled={isSoldOut}
+            className={`py-2.5 px-5 rounded-lg transition-colors font-bold text-sm flex items-center gap-1.5 shrink-0 ${
+              isSoldOut
+                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                : 'bg-[rgb(12,60,31)] text-white hover:bg-green-600'
+            }`}
           >
             <ShoppingCart className="w-4 h-4" />
-            COMPRAR
+            {isSoldOut ? 'AGOTADO' : 'COMPRAR'}
           </button>
         </div>
       </div>

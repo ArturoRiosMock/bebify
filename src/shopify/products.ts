@@ -56,6 +56,7 @@ export const convertShopifyProductToAppProduct = (shopifyProduct: ShopifyProduct
     origin: alcoholAttrs.origin,
     seoTitle: shopifyProduct.seo?.title || undefined,
     seoDescription: shopifyProduct.seo?.description || undefined,
+    availableForSale: shopifyProduct.variants.edges.some((e) => e.node.availableForSale),
   };
 };
 

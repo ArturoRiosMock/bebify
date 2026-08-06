@@ -37,6 +37,7 @@ function toCartProduct(p: ShopifyProduct): Product {
     variantId: p.variantId,
     handle: p.handle,
     cantidadLabel: p.cantidadLabel,
+    availableForSale: p.availableForSale,
   };
 }
 
@@ -67,6 +68,7 @@ export const SearchDrawer = ({ isOpen, onClose, onOpenCart }: SearchDrawerProps)
   };
 
   const handleAdd = useCallback((product: ShopifyProduct) => {
+    if (product.availableForSale === false) return;
     const qty = quantities[product.id] ?? 1;
     addToCart(toCartProduct(product), qty);
 
@@ -212,6 +214,7 @@ export const SearchDrawer = ({ isOpen, onClose, onOpenCart }: SearchDrawerProps)
                     {results.map((product) => {
                       const isAdded = addedIds.has(product.id);
                       const qty = getQuantity(product.id);
+                      const isSoldOut = product.availableForSale === false;
 
                       return (
                         <motion.div key={product.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3 py-3 border-b border-gray-100 last:border-0">
@@ -244,31 +247,39 @@ export const SearchDrawer = ({ isOpen, onClose, onOpenCart }: SearchDrawerProps)
                             <div className="mt-1.5">
                               <p className="text-[#0c3c1f] font-bold text-sm mb-1.5">${product.price.toFixed(2)} MXN</p>
                               <div className="flex items-center gap-2">
-                                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                                  <button
-                                    onClick={() => setQuantity(product.id, qty - 1)}
-                                    className="p-1.5 hover:bg-gray-100 transition-colors"
-                                    disabled={qty <= 1}
-                                    aria-label={`Disminuir cantidad de ${product.name}`}
-                                  >
-                                    <Minus className="w-3.5 h-3.5" aria-hidden />
-                                  </button>
-                                  <span className="px-3 text-sm font-medium min-w-[2rem] text-center" aria-live="polite">{qty}</span>
-                                  <button
-                                    onClick={() => setQuantity(product.id, qty + 1)}
-                                    className="p-1.5 hover:bg-gray-100 transition-colors"
-                                    aria-label={`Aumentar cantidad de ${product.name}`}
-                                  >
-                                    <Plus className="w-3.5 h-3.5" aria-hidden />
-                                  </button>
-                                </div>
+                                {!isSoldOut && (
+                                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                                    <button
+                                      onClick={() => setQuantity(product.id, qty - 1)}
+                                      className="p-1.5 hover:bg-gray-100 transition-colors"
+                                      disabled={qty <= 1}
+                                      aria-label={`Disminuir cantidad de ${product.name}`}
+                                    >
+                                      <Minus className="w-3.5 h-3.5" aria-hidden />
+                                    </button>
+                                    <span className="px-3 text-sm font-medium min-w-[2rem] text-center" aria-live="polite">{qty}</span>
+                                    <button
+                                      onClick={() => setQuantity(product.id, qty + 1)}
+                                      className="p-1.5 hover:bg-gray-100 transition-colors"
+                                      aria-label={`Aumentar cantidad de ${product.name}`}
+                                    >
+                                      <Plus className="w-3.5 h-3.5" aria-hidden />
+                                    </button>
+                                  </div>
+                                )}
                                 <motion.button
                                   onClick={() => handleAdd(product)}
-                                  whileTap={{ scale: 0.95 }}
-                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-white ${isAdded ? 'bg-green-500' : 'bg-[#0c3c1f] hover:bg-[#0a3019]'}`}
-                                  disabled={isAdded}
+                                  whileTap={isSoldOut || isAdded ? undefined : { scale: 0.95 }}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all text-white ${
+                                    isSoldOut
+                                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                      : isAdded
+                                        ? 'bg-green-500'
+                                        : 'bg-[#0c3c1f] hover:bg-[#0a3019]'
+                                  }`}
+                                  disabled={isSoldOut || isAdded}
                                 >
-                                  {isAdded ? (<><Check className="w-4 h-4" />Agregado</>) : (<><ShoppingCart className="w-4 h-4" />Agregar</>)}
+                                  {isSoldOut ? 'Agotado' : isAdded ? (<><Check className="w-4 h-4" />Agregado</>) : (<><ShoppingCart className="w-4 h-4" />Agregar</>)}
                                 </motion.button>
                               </div>
                             </div>
