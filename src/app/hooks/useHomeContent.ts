@@ -1,93 +1,39 @@
 import { useEffect, useState } from 'react';
-import type { HeroContent, HeroSlide, HomeContent } from '@/types/homeContent';
+import type { HomeContent } from '@/types/homeContent';
 import homeContentDefault from '@/data/home-content.json';
+import { mergeContent } from '@/app/hooks/homeContentMerge';
+import { fetchHomeContent } from '@/app/hooks/fetchHomeContent';
+import { fileToBase64 } from '@/app/utils/fileToBase64';
 
-function migrateHero(hero: Partial<HeroContent> & Record<string, unknown>): HeroContent {
-  const defaults = (homeContentDefault as HomeContent).hero;
+const DEFAULTS = homeContentDefault as HomeContent;
 
-  if (Array.isArray(hero.slides) && hero.slides.length > 0) {
-    return { slides: hero.slides as HeroSlide[] };
-  }
+/** Sin slides hasta resolver el remoto: evita pintar un hero obsoleto del bundle. */
+const PENDING_CONTENT: HomeContent = { ...DEFAULTS, hero: { slides: [] } };
 
-  const legacy = hero as {
-    imageMobile?: string;
-    imageDesktop?: string;
-    title?: string;
-    subtitle?: string;
-    badge?: string;
-    buttonText?: string;
-  };
-
-  if (legacy.title || legacy.imageDesktop || legacy.imageMobile) {
-    return {
-      slides: [
-        {
-          imageMobile: legacy.imageMobile ?? '',
-          imageDesktop: legacy.imageDesktop ?? '',
-          title: legacy.title ?? defaults.slides[0].title,
-          subtitle: legacy.subtitle ?? defaults.slides[0].subtitle,
-          badge: legacy.badge ?? defaults.slides[0].badge,
-          buttonText: legacy.buttonText ?? defaults.slides[0].buttonText,
-        },
-        ...defaults.slides.slice(1),
-      ],
-    };
-  }
-
-  return defaults;
-}
-
-function mergeContent(remote: Partial<HomeContent>): HomeContent {
-  const defaults = homeContentDefault as HomeContent;
-  return {
-    ...defaults,
-    ...remote,
-    hero: migrateHero((remote.hero ?? {}) as Partial<HeroContent> & Record<string, unknown>),
-    registerBanner: { ...defaults.registerBanner, ...remote.registerBanner },
-    about: {
-      ...defaults.about,
-      ...remote.about,
-      features: remote.about?.features ?? defaults.about.features,
-    },
-    benefits: remote.benefits ?? defaults.benefits,
-    carousels: { ...defaults.carousels, ...remote.carousels },
-  };
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : 'Contenido por defecto';
 }
 
 export function useHomeContent() {
-  const [content, setContent] = useState<HomeContent>(homeContentDefault as HomeContent);
+  const [content, setContent] = useState<HomeContent>(PENDING_CONTENT);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const alive = { current: true };
+    const settle = (next: HomeContent, err: string | null) => {
+      if (!alive.current) return;
+      setContent(next);
+      setError(err);
+      setLoading(false);
+    };
 
-    async function load() {
-      try {
-        const res = await fetch('/api/home-content', { cache: 'no-store' });
-        if (!res.ok) {
-          throw new Error('No se pudo cargar el contenido');
-        }
-        const data = (await res.json()) as Partial<HomeContent>;
-        if (!cancelled) {
-          setContent(mergeContent(data));
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setContent(homeContentDefault as HomeContent);
-          setError(err instanceof Error ? err.message : 'Contenido por defecto');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
+    fetchHomeContent()
+      .then((data) => settle(data, null))
+      .catch((err: unknown) => settle(DEFAULTS, errorMessage(err)));
 
-    load();
     return () => {
-      cancelled = true;
+      alive.current = false;
     };
   }, []);
 
@@ -106,27 +52,8 @@ export async function persistHomeContent(
   });
 
   const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Error al guardar');
-  }
-
+  if (!res.ok) throw new Error(data.error || 'Error al guardar');
   return mergeContent(data.content);
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result !== 'string') {
-        reject(new Error('No se pudo leer el archivo'));
-        return;
-      }
-      resolve(result);
-    };
-    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
-    reader.readAsDataURL(file);
-  });
 }
 
 export async function uploadHomeImage(
@@ -134,7 +61,6 @@ export async function uploadHomeImage(
   password: string,
   file: File,
 ): Promise<string> {
-  const dataUrl = await fileToBase64(file);
   const res = await fetch('/api/upload-home-image', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -143,14 +69,11 @@ export async function uploadHomeImage(
       password,
       filename: file.name,
       contentType: file.type || 'image/jpeg',
-      data: dataUrl,
+      data: await fileToBase64(file),
     }),
   });
 
   const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || 'Error al subir imagen');
-  }
-
+  if (!res.ok) throw new Error(data.error || 'Error al subir imagen');
   return data.url as string;
 }
