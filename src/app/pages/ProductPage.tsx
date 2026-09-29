@@ -19,6 +19,10 @@ const truncate = (text: string, max: number) => {
 const buildProductSchema = (product: Product) => {
   const path = product.handle ? `/producto/${product.handle}` : `/producto/${product.id}`;
   const canonical = absoluteUrl(path);
+  const availability =
+    product.availableForSale === false
+      ? 'https://schema.org/OutOfStock'
+      : 'https://schema.org/InStock';
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -36,7 +40,7 @@ const buildProductSchema = (product: Product) => {
       url: canonical,
       priceCurrency: 'MXN',
       price: product.price.toFixed(2),
-      availability: 'https://schema.org/InStock',
+      availability,
       itemCondition: 'https://schema.org/NewCondition',
     },
   };
@@ -156,7 +160,7 @@ export const ProductPage: React.FC = () => {
 
   return (
     <>
-      <JsonLd schema={buildProductSchema(product)} />
+      <JsonLd schema={buildProductSchema(product)} replaceSSRProduct />
       <ProductDetail
         product={product}
         allProducts={allProducts}
