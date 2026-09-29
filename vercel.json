@@ -56,9 +56,12 @@
   ],
   "rewrites": [
     {
+      "source": "/producto/:handle",
+      "destination": "/api/producto/:handle"
+    },
+    {
       "source": "/((?!api/|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
 }
-
